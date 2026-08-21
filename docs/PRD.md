@@ -1,4 +1,4 @@
-# KNOWERS — Product Requirements Document
+# In Good Company — Product Requirements Document
 
 | | |
 |---|---|
@@ -14,7 +14,7 @@
 
 ## 1. Executive summary
 
-KNOWERS is a two-player deduction game made from the real people in each player's life. Each player uploads a small deck of people, secretly chooses one person from their own deck, and sees the other player's deck as their game board. They alternate asking yes/no questions, privately eliminating cards, and eventually guessing the other player's chosen person.
+In Good Company is a two-player deduction game made from the real people in each player's life. Each player uploads a small deck of people, secretly chooses one person from their own deck, and sees the other player's deck as their game board. They alternate asking yes/no questions, privately eliminating cards, and eventually guessing the other player's chosen person.
 
 The visual mechanic gives the conversation structure. The value is not guessing fastest. It is learning who matters to someone, how they see those people, and the stories behind their answers. A question can be visible and literal — "Is this person wearing a hat?" — or relational and revealing — "Is this the funniest person you know?"
 
@@ -282,19 +282,19 @@ The first turn should teach the game in place: ask a yes/no question, wait for t
 
 ## 11. Technical architecture
 
-> **Recommended stack:** Next.js App Router and TypeScript for the web application; Supabase Auth, Postgres, Realtime, and private Storage for identity, state, synchronization, and images; deploy the Next.js application on Vercel.
+> **Recommended stack:** Next.js App Router and TypeScript for the web application; managed Postgres (for example Neon or RDS) accessed only from the server through Drizzle or Prisma; WebSockets for realtime synchronization (a Node WebSocket server, or a managed pub/sub such as Ably or Pusher if self-hosting is premature); private S3-compatible object storage for images; anonymous identity via signed HTTP-only session cookies. Deploy the Next.js application on Vercel or an equivalent host that supports the chosen WebSocket approach.
 
 ### 11.1 Application structure
 
 - Use Server Components for initial authorized room and deck snapshots; use Client Components for the live board, uploader, prompt composer, and presence indicators.
 - Use Next.js Route Handlers or server-side functions for room creation, link-token exchange, readiness, secret selection, question and answer mutations, and guess validation.
-- Do not expose a service-role credential to the browser. Browser access uses a publishable key plus authenticated user JWT and Row Level Security.
-- Use one private realtime channel per room: `room:{room_id}`. Authorize Broadcast and Presence membership against room_players.
+- The browser never talks to the database. Every read and write goes through the server API, which authorizes the actor against room membership before touching data. Database credentials exist only on the server.
+- Use one private realtime channel per room: `room:{room_id}`. Authorize channel subscription and presence membership against room_players when the socket connects, and re-check on reconnect.
 - Keep the call outside the product. Add an unobtrusive "Keep your call open — this game works in another tab or on your phone" cue in the lobby.
 
 ### 11.2 Authentication and link joining
 
-- Create an anonymous authenticated user on first interaction so every player has a stable user ID and RLS-scoped records without sign-up friction.
+- Create an anonymous authenticated user on first interaction — a server-issued user ID in a signed HTTP-only cookie — so every player has a stable identity and owner-scoped records without sign-up friction.
 - The share URL contains a high-entropy invite token, not the raw room ID. Exchange the token server-side for a room membership; then remove it from subsequent navigation where practical.
 - A browser session can resume the same active room. Cross-device recovery and saved decks require email magic link or another recoverable identity.
 - Apply CAPTCHA or equivalent abuse controls to anonymous account creation and upload initiation before a public launch.
@@ -309,7 +309,7 @@ The first turn should teach the game in place: ask a yes/no question, wait for t
 
 ### 11.4 Server-authoritative actions
 
-The following actions must be validated on the server or inside tightly scoped database functions. A direct client write is acceptable only when equivalent authorization and state-transition checks are enforced by RLS and constraints.
+Every one of the following actions is validated on the server; the client never writes to the database directly. State-transition checks are backed by database constraints and transactions so concurrent or replayed requests cannot corrupt a round.
 
 | Action | Required validation |
 |---|---|
@@ -326,7 +326,7 @@ The following actions must be validated on the server or inside tightly scoped d
 
 ## 12. Data model
 
-Identifiers should be UUIDs. Every table includes created_at and updated_at where useful. Use explicit foreign keys, check constraints, unique constraints, and RLS on every exposed table. Store secret selections separately from opponent-readable round data to make accidental disclosure harder.
+Identifiers should be UUIDs. Every table includes created_at and updated_at where useful. Use explicit foreign keys, check constraints, and unique constraints, and enforce the visibility column below in the server's data-access layer for every query. Store secret selections separately from opponent-readable round data to make accidental disclosure harder.
 
 | Entity | Key fields | Visibility |
 |---|---|---|
@@ -384,7 +384,7 @@ Use Guess Who? only as an internal explanatory reference. Do not use the name in
 
 - **Performance:** First useful room content should render quickly on ordinary mobile connections. Card thumbnails should be normalized and lazy-loaded; uploads should show per-file progress and recover from transient failures.
 - **Reliability:** No secret may appear in an opponent-authorized response, HTML payload, realtime event, client cache, error message, or analytics event. Reconnect must restore canonical game state.
-- **Concurrency:** Design for many independent two-player rooms rather than one large shared board. Room isolation must be enforced in channel authorization and RLS.
+- **Concurrency:** Design for many independent two-player rooms rather than one large shared board. Room isolation must be enforced in channel authorization and in every server-side data-access path.
 - **Accessibility:** Keyboard support for every action, visible focus, 44px-class touch targets, descriptive labels, high contrast, reduced motion, and no color-only status.
 - **Compatibility:** Support current evergreen desktop and mobile browsers. The core flow must work in an ordinary browser tab while another app handles the call.
 - **Observability:** Log mutation failures, reconnects, channel authorization errors, upload failures, and state-transition conflicts using room-safe identifiers. Never log photos, names, secrets, or free-text questions.
@@ -446,7 +446,7 @@ These are testable launch hypotheses, not forecasts. Replace them with observed 
 
 ### Phase 1 — Link, decks, and room authorization
 
-- Anonymous auth, room creation, invite-token exchange, two seats, private storage, deck builder, expiry, and RLS tests.
+- Anonymous auth, room creation, invite-token exchange, two seats, private storage, deck builder, expiry, and authorization tests on every API path.
 - Mobile-first upload/crop pipeline with reliable reconnect and deletion.
 
 ### Phase 2 — Complete real-time game loop
@@ -485,7 +485,7 @@ These are testable launch hypotheses, not forecasts. Replace them with observed 
 | Third-party privacy | People shown may not have chosen to participate. | Explicit permission confirmation, adults-only MVP, private rooms, short retention, no public graph, immediate deletion. |
 | Workplace harm | Sensitive prompts can expose or embarrass people. | Team-safe default, custom questions off by default, Skip without penalty, organizer cannot inspect content. |
 | Game becomes superficial | Players rely only on visible photo questions. | Prompt progression favors relationship and story questions after early turns; reveal asks what should be known about the person. |
-| Cheating / leakage | A secret reaches the opponent's client or logs. | Separate secret table, server-side guess validation, RLS tests, payload audits, redacted observability. |
+| Cheating / leakage | A secret reaches the opponent's client or logs. | Separate secret table, server-side guess validation, authorization tests, payload audits, redacted observability. |
 | Realtime divergence | Players see different turns or results. | Persist canonical state, idempotent mutations, version checks, reconnect snapshot, server-resolved completion. |
 | Trademark resemblance | Brand or UI is confused with an existing game. | Original name, copy, visual system, prompt mechanics, and focused legal review before launch. |
 | Too many surfaces | Zoom, extensions, native apps, and calling dilute the first build. | One responsive link-first web app until usage proves a specific integration is worth the cost. |
@@ -496,14 +496,13 @@ The architecture recommendations above were checked against the current official
 
 - [Next.js App Router](https://nextjs.org/docs/app)
 - [Next.js Route Handlers](https://nextjs.org/docs/app/building-your-application/routing/route-handlers)
-- [Supabase Realtime overview](https://supabase.com/docs/guides/realtime)
-- [Supabase Realtime Broadcast](https://supabase.com/docs/guides/realtime/broadcast)
-- [Supabase Realtime Presence](https://supabase.com/docs/guides/realtime/presence)
-- [Supabase Realtime Authorization](https://supabase.com/docs/guides/realtime/authorization)
-- [Supabase Anonymous Sign-Ins](https://supabase.com/docs/guides/auth/auth-anonymous)
-- [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Supabase Storage Access Control](https://supabase.com/docs/guides/storage/security/access-control)
-- [Supabase signed Storage URLs](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl)
+- [ws — Node WebSocket server](https://github.com/websockets/ws)
+- [Drizzle ORM](https://orm.drizzle.team/docs/overview)
+- [Prisma ORM](https://www.prisma.io/docs/orm)
+- [Neon serverless Postgres](https://neon.tech/docs/introduction)
+- [AWS S3 presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
+- [iron-session — signed, encrypted cookies](https://github.com/vvo/iron-session)
+- [Ably Pub/Sub](https://ably.com/docs/basics) / [Pusher Channels](https://pusher.com/docs/channels/) (managed realtime fallback)
 
 ## Appendix A — Suggested route map
 

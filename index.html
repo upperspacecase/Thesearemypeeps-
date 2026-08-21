@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>In Good Company</title>
+<meta name="description" content="A two-player guessing game made from the real people in your lives.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+  :root{
+    --ember:#E1490F;
+    --ember-deep:#A93407;
+    --ember-shadow:#7C2504;
+    --glow:#FF8A4C;
+    --blush:#F6B49B;
+    --cream:#FFF6EF;
+    --cream-dim:rgba(255,246,239,.78);
+    --ink:#3A1707;
+    --glass:rgba(255,238,228,.14);
+    --glass-edge:rgba(255,246,239,.32);
+    --sans:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --serif:"Instrument Serif",Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+  body{
+    font-family:var(--sans);
+    background:var(--ember);
+    color:var(--cream);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:inherit}
+  ::selection{background:var(--cream);color:var(--ember)}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;
+    min-height:100svh;
+    display:grid;
+    place-items:center;
+    padding:96px 24px 120px;
+    background:
+      radial-gradient(1100px 700px at 78% 18%, #F0561A 0%, transparent 60%),
+      radial-gradient(900px 900px at 12% 85%, #C63E0B 0%, transparent 55%),
+      var(--ember);
+    overflow:hidden;
+  }
+  .figure{position:absolute;inset:0;pointer-events:none}
+  .figure span{position:absolute;border-radius:50%;filter:blur(70px)}
+  .figure .f1{width:520px;height:640px;right:8%;top:4%;background:radial-gradient(closest-side,rgba(246,180,155,.55),transparent 72%)}
+  .figure .f2{width:420px;height:560px;right:16%;top:34%;background:radial-gradient(closest-side,rgba(255,224,206,.5),transparent 70%)}
+  .figure .f3{width:640px;height:520px;left:-10%;bottom:-14%;background:radial-gradient(closest-side,rgba(124,37,4,.55),transparent 72%)}
+  .figure .f4{width:300px;height:300px;left:22%;top:10%;background:radial-gradient(closest-side,rgba(255,138,76,.5),transparent 70%)}
+
+  .card{
+    position:relative;
+    width:min(620px,100%);
+    border-radius:40px;
+    padding:clamp(36px,5.5vw,60px);
+    background:linear-gradient(160deg,rgba(255,240,231,.20),rgba(255,240,231,.08));
+    border:1px solid var(--glass-edge);
+    box-shadow:0 40px 90px -30px rgba(90,26,3,.55);
+    backdrop-filter:blur(22px);
+    -webkit-backdrop-filter:blur(22px);
+  }
+  .brand{
+    font-size:13px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--cream-dim);margin-bottom:34px;
+  }
+  h1{
+    font-weight:400;
+    font-size:clamp(38px,6vw,58px);
+    line-height:1.06;
+    letter-spacing:-.015em;
+    text-wrap:balance;
+    margin-bottom:26px;
+  }
+  .lede{max-width:44ch;color:var(--cream-dim);margin-bottom:14px}
+  .lede strong{color:var(--cream);font-weight:500}
+
+  .qshift{margin:30px 0 6px;display:grid;gap:14px}
+  .qshift .cue{font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--cream-dim)}
+  .q{
+    font-family:var(--serif);font-style:italic;font-size:clamp(21px,3vw,27px);
+    line-height:1.25;text-wrap:balance;
+  }
+  .q.late{color:#FFE3D2}
+
+  .ticks{
+    display:flex;align-items:flex-end;gap:9px;height:34px;margin:34px 0 8px;
+  }
+  .ticks i{width:2px;background:var(--cream);opacity:.85;border-radius:2px}
+  .ticks i:nth-child(odd){height:60%}
+  .ticks i:nth-child(even){height:100%}
+  .ticks i:nth-child(3n){height:38%}
+  .ticks em{font-style:normal;font-size:13px;color:var(--cream-dim);margin-left:10px;align-self:center;white-space:nowrap}
+
+  .actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px;align-items:center}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    font:inherit;font-size:16px;font-weight:500;text-decoration:none;cursor:pointer;
+    padding:15px 28px;border-radius:999px;border:1px solid transparent;
+    transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+  }
+  .btn:focus-visible{outline:3px solid var(--cream);outline-offset:3px}
+  .btn.solid{background:var(--cream);color:var(--ink);box-shadow:0 14px 30px -12px rgba(70,20,2,.6)}
+  .btn.solid:hover{transform:translateY(-2px);box-shadow:0 20px 36px -12px rgba(70,20,2,.65)}
+  .btn.ghost{border-color:var(--glass-edge);color:var(--cream);background:rgba(255,240,231,.06)}
+  .btn.ghost:hover{background:rgba(255,240,231,.14)}
+  .btn .play{
+    display:inline-grid;place-items:center;width:0;height:0;
+    border-style:solid;border-width:6px 0 6px 10px;border-color:transparent transparent transparent var(--ink);
+  }
+  .microcopy{font-size:14px;color:var(--cream-dim);margin-top:22px}
+
+  /* ---------- shared section chrome ---------- */
+  section{position:relative}
+  .band{
+    background:linear-gradient(180deg,var(--ember) 0%,var(--ember-deep) 12%,var(--ember-deep) 88%,var(--ember) 100%);
+    padding:110px 0;
+  }
+  .eyebrow{
+    font-size:13px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--blush);margin-bottom:18px;
+  }
+  h2{
+    font-weight:400;font-size:clamp(30px,4.4vw,44px);line-height:1.1;
+    letter-spacing:-.01em;text-wrap:balance;margin-bottom:22px;
+  }
+  .prose{max-width:58ch;color:var(--cream-dim)}
+  .prose + .prose{margin-top:14px}
+
+  /* ---------- before you play ---------- */
+  .specs{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:44px 0 40px;
+  }
+  .spec{
+    border-radius:24px;padding:22px 24px;
+    background:var(--glass);border:1px solid rgba(255,246,239,.18);
+  }
+  .spec dt{font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--blush);margin-bottom:8px}
+  .spec dd{font-size:19px;font-weight:500;line-height:1.35}
+  .consent{
+    max-width:58ch;font-size:15px;color:var(--cream-dim);
+    border-left:2px solid var(--blush);padding-left:18px;margin-top:26px;
+  }
+
+  /* ---------- mini board ---------- */
+  .board{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+    width:min(400px,100%);
+  }
+  .frame{
+    aspect-ratio:3/4;border-radius:12px;position:relative;
+    background:var(--cream);padding:7px;
+    box-shadow:0 10px 24px -14px rgba(70,20,2,.55);
+    transition:transform .25s ease, opacity .25s ease;
+  }
+  .frame .face{
+    position:absolute;inset:7px;border-radius:7px;overflow:hidden;
+  }
+  .frame svg{display:block;width:100%;height:100%}
+  .frame.down{transform:rotate(-1.5deg) scale(.96);opacity:.38}
+  .frame.down .face{background:var(--ember-shadow)}
+  .frame.down svg{display:none}
+  .frame.down .face::after{
+    content:"?";position:absolute;inset:0;display:grid;place-items:center;
+    font-family:var(--serif);font-size:26px;color:rgba(255,246,239,.55);
+  }
+  .frame.secret{outline:3px solid var(--glow);outline-offset:3px}
+
+  /* ---------- how to play steps ---------- */
+  .steps{display:grid;gap:84px;margin-top:64px}
+  .step{
+    display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);
+    gap:clamp(32px,6vw,80px);align-items:center;
+  }
+  .step:nth-child(even){direction:rtl}
+  .step:nth-child(even)>*{direction:ltr}
+  .step .no{
+    font-family:var(--serif);font-style:italic;font-size:20px;color:var(--blush);
+    margin-bottom:10px;
+  }
+  .step h3{font-weight:500;font-size:clamp(23px,3vw,29px);line-height:1.2;margin-bottom:12px;letter-spacing:-.01em}
+  .step p{max-width:48ch;color:var(--cream-dim)}
+  .qlist{margin-top:16px;display:grid;gap:8px}
+  .qlist li{
+    list-style:none;font-family:var(--serif);font-style:italic;
+    font-size:20px;line-height:1.3;color:#FFE3D2;
+  }
+  .qlist li::before{content:"— ";color:var(--blush)}
+  .visual{display:grid;justify-items:center}
+
+  .reveal-card{
+    width:min(280px,100%);border-radius:28px;padding:12px 12px 22px;
+    background:var(--cream);color:var(--ink);text-align:center;
+    box-shadow:0 30px 60px -24px rgba(70,20,2,.6);
+    transform:rotate(2deg);
+  }
+  .reveal-card .face{border-radius:20px;overflow:hidden;aspect-ratio:1/1;margin-bottom:16px}
+  .reveal-card svg{display:block;width:100%;height:100%}
+  .reveal-card .name{font-weight:600;font-size:20px;letter-spacing:-.01em}
+  .reveal-card .rel{font-family:var(--serif);font-style:italic;font-size:17px;color:#8A4A2C;margin-top:2px}
+
+  /* ---------- closing ---------- */
+  .closing{
+    padding:130px 24px 140px;text-align:center;
+    background:
+      radial-gradient(800px 500px at 50% 0%, #F0561A 0%, transparent 65%),
+      var(--ember);
+  }
+  .closing .small{
+    font-family:var(--serif);font-style:italic;font-size:clamp(20px,2.6vw,25px);
+    color:#FFE3D2;margin-bottom:20px;
+  }
+  .closing h2{margin-bottom:36px}
+  footer{
+    padding:36px 24px 48px;text-align:center;
+    font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--cream-dim);
+    background:var(--ember);
+  }
+
+  @media (max-width:760px){
+    .specs{grid-template-columns:repeat(2,1fr)}
+    .step{grid-template-columns:1fr}
+    .step:nth-child(even){direction:ltr}
+    .visual{justify-items:start}
+    .hero{padding-top:72px}
+  }
+  @media (max-width:430px){
+    .specs{grid-template-columns:1fr}
+    .actions .btn{width:100%;justify-content:center}
+  }
+</style>
+</head>
+<body>
+
+<!-- abstract portrait symbols: simple warm silhouettes, no real photos -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="p" viewBox="0 0 60 80" preserveAspectRatio="xMidYMid slice">
+      <rect width="60" height="80" fill="var(--bg,#F6B49B)"/>
+      <circle cx="30" cy="30" r="13" fill="var(--fg,#A93407)"/>
+      <path d="M8 80 C8 58 22 50 30 50 C38 50 52 58 52 80 Z" fill="var(--fg,#A93407)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="hero">
+  <div class="figure" aria-hidden="true">
+    <span class="f1"></span><span class="f2"></span><span class="f3"></span><span class="f4"></span>
+  </div>
+
+  <div class="card">
+    <p class="brand">In Good Company</p>
+    <h1>Meet the people behind the person.</h1>
+    <p class="lede"><strong>In Good Company</strong> is a two-player guessing game made from the real people in your lives.</p>
+    <p class="lede">Each of you brings 12 people. Choose one in secret. Ask yes-or-no questions, remove faces from the board and try to guess who the other player chose.</p>
+
+    <div class="qshift">
+      <p class="cue">You might begin with</p>
+      <p class="q">&ldquo;Are they wearing a hat?&rdquo;</p>
+      <p class="cue">Five minutes later, you&rsquo;re asking</p>
+      <p class="q late">&ldquo;Is this the person you would call when everything went wrong?&rdquo;</p>
+    </div>
+
+    <p class="lede" style="margin-top:22px">You are trying to find one person. Along the way, you discover an entire world.</p>
+
+    <div class="ticks" aria-hidden="true">
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      <em>10–20 min</em>
+    </div>
+
+    <div class="actions">
+      <a class="btn solid" href="#how"><span class="play" aria-hidden="true"></span>Start a game</a>
+      <a class="btn ghost" href="#how">Play with your team</a>
+    </div>
+    <p class="microcopy">One private link. No download.</p>
+  </div>
+</header>
+
+<section class="band" aria-labelledby="before-h">
+  <div class="wrap">
+    <p class="eyebrow">Before you play</p>
+    <h2 id="before-h">Twelve people. One secret each.</h2>
+
+    <dl class="specs">
+      <div class="spec"><dt>Players</dt><dd>2</dd></div>
+      <div class="spec"><dt>Bring</dt><dd>12 photos each</dd></div>
+      <div class="spec"><dt>Setup</dt><dd>About 10 minutes the first time</dd></div>
+      <div class="spec"><dt>Playing time</dt><dd>10–20 minutes per round</dd></div>
+      <div class="spec"><dt>You&rsquo;ll need</dt><dd>One phone or laptop per player</dd></div>
+      <div class="spec"><dt>Play from</dt><dd>The same room or alongside any call</dd></div>
+    </dl>
+
+    <p class="prose">Choose people from different parts of your life: the friend who knew you before the job title, the cousin who knows the family stories, the former flatmate with evidence, or the person you would call first.</p>
+    <p class="consent">Only include adults whose photos you have permission to share in your private game.</p>
+  </div>
+</section>
+
+<section id="how" aria-labelledby="how-h" style="padding:110px 0">
+  <div class="wrap">
+    <p class="eyebrow">One question at a time</p>
+    <h2 id="how-h">How to play</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div>
+          <p class="no">Step one</p>
+          <h3>Make your board</h3>
+          <p>Upload 12 people from your life. Add a photo and first name for each one.</p>
+        </div>
+        <div class="visual" aria-hidden="true">
+          <div class="board">
+            <div class="frame"><span class="face"><svg style="--bg:#F6B49B;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFD9BF;--fg:#C63E0B"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#EFA07E;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFC3A0;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F8C6AC;--fg:#8F2C05"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFB88E;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F2AB8A;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFD2B4;--fg:#B53908"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F6B49B;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFC9A6;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#EFA985;--fg:#8F2C05"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFDCC4;--fg:#C63E0B"><use href="#p"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <p class="no">Step two</p>
+          <h3>Choose someone secretly</h3>
+          <p>Pick one person from your board. The other player can see everyone you brought&mdash;but not who you chose.</p>
+        </div>
+        <div class="visual" aria-hidden="true">
+          <div class="board">
+            <div class="frame"><span class="face"><svg style="--bg:#F6B49B;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFD9BF;--fg:#C63E0B"><use href="#p"/></svg></span></div>
+            <div class="frame secret"><span class="face"><svg style="--bg:#EFA07E;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFC3A0;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F8C6AC;--fg:#8F2C05"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFB88E;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F2AB8A;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFD2B4;--fg:#B53908"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F6B49B;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFC9A6;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#EFA985;--fg:#8F2C05"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFDCC4;--fg:#C63E0B"><use href="#p"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <p class="no">Step three</p>
+          <h3>Start asking</h3>
+          <p>Ask one yes-or-no question at a time.</p>
+          <ul class="qlist">
+            <li>Are they wearing glasses?</li>
+            <li>Have you known them since school?</li>
+            <li>Are they the funniest person you know?</li>
+            <li>Would you trust them to get you out of trouble?</li>
+          </ul>
+        </div>
+        <div class="visual" aria-hidden="true">
+          <div class="board">
+            <div class="frame"><span class="face"><svg style="--bg:#F6B49B;--fg:#A93407"><use href="#p"/></svg></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#EFA07E;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F8C6AC;--fg:#8F2C05"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFB88E;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFD2B4;--fg:#B53908"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#F6B49B;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#EFA985;--fg:#8F2C05"><use href="#p"/></svg></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFDCC4;--fg:#C63E0B"><use href="#p"/></svg></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <p class="no">Step four</p>
+          <h3>Remove people and make your guess</h3>
+          <p>Use each answer to eliminate people from the board. Guess when you think you know who remains.</p>
+        </div>
+        <div class="visual" aria-hidden="true">
+          <div class="board">
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#EFA07E;--fg:#7C2504"><use href="#p"/></svg></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame"><span class="face"><svg style="--bg:#FFD2B4;--fg:#B53908"><use href="#p"/></svg></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame down"><span class="face"></span></div>
+            <div class="frame down"><span class="face"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <p class="no">Step five</p>
+          <h3>Meet the person</h3>
+          <p>At the reveal, tell the story: who are they, how did you meet, and what should the other player know about them?</p>
+        </div>
+        <div class="visual" aria-hidden="true">
+          <div class="reveal-card">
+            <span class="face"><svg viewBox="0 0 60 60" preserveAspectRatio="xMidYMid slice"><rect width="60" height="60" fill="#EFA07E"/><circle cx="30" cy="24" r="12" fill="#7C2504"/><path d="M8 60 C8 44 22 38 30 38 C38 38 52 44 52 60 Z" fill="#7C2504"/></svg></span>
+            <p class="name">Maya</p>
+            <p class="rel">knew me before the job title</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="closing">
+  <p class="small">The board gets smaller. Your picture of each other gets bigger.</p>
+  <h2>Bring your people. Meet theirs.</h2>
+  <a class="btn solid" href="#"><span class="play" aria-hidden="true"></span>Create a private game</a>
+</section>
+
+<footer>In Good Company</footer>
+
+</body>
+</html>
