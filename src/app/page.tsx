@@ -107,16 +107,10 @@ export default function Home() {
         </div>
 
         <div className="panel" style={{ width: "min(620px,100%)", borderRadius: 40 }}>
-          <p className="eyebrow" style={{ color: "var(--cream-dim)", marginBottom: 30 }}>In Good Company</p>
-          <h1 className="display" style={{ marginBottom: 24 }}>Meet the people behind the person.</h1>
-          <p className="dim" style={{ maxWidth: "44ch", marginBottom: 14 }}>
+          <h1 className="display" style={{ marginBottom: 24, fontSize: "clamp(28px,4.5vw,40px)" }}>
             <strong style={{ color: "var(--cream)", fontWeight: 500 }}>In Good Company</strong> is a two-player guessing
             game made from the real people in your lives.
-          </p>
-          <p className="dim" style={{ maxWidth: "44ch" }}>
-            Each of you brings 12 people. Choose one in secret. Ask yes-or-no questions, remove faces from the board and
-            try to guess who the other player chose.
-          </p>
+          </h1>
 
           <div style={{ display: "grid", gap: 12, margin: "28px 0 6px" }}>
             <p className="eyebrow" style={{ marginBottom: 0, color: "var(--cream-dim)", fontSize: 12 }}>You might begin with</p>
