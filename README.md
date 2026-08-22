@@ -2,19 +2,45 @@
 
 Meet the people behind the person.
 
-In Good Company is a two-player guessing game made from the real people in your lives. Each player brings 12 people, chooses one in secret, and sees the other player's deck as their board. You alternate yes-or-no questions — "Are they wearing a hat?" one minute, "Is this the person you would call when everything went wrong?" a few minutes later — privately eliminate faces, and guess who the other player chose. You're trying to find one person; along the way, you discover an entire world.
+In Good Company is a two-player guessing game made from the real people in your lives. Each player brings 12 people, chooses one in secret, and sees the other player's deck as their board. You alternate yes-or-no questions — "Are they wearing a hat?" one minute, "Is this the person you would call when everything went wrong?" a few minutes later — privately eliminate faces, and guess who the other player chose.
+
+This repository contains the full working MVP: a link-first Next.js web app implementing the Quick Room mode from the [PRD](docs/PRD.md).
+
+## Run it
+
+```bash
+npm install
+npm run dev          # http://localhost:3000
+```
+
+Open the site, click **Start a game**, build a deck, and send the invite link to the second player (a second browser/incognito window works for trying it alone). No accounts, no external services — state lives in a local SQLite file under `data/`.
+
+```bash
+npm run build && npm start        # production build
+npm run typecheck                 # strict TypeScript
+npm run test:integration          # full two-player game over the API (server must be running)
+```
+
+Useful environment variables: `IGC_SECRET` (cookie-signing secret — set in production), `IGC_DATA_DIR` (database + uploads location), `IGC_DECK_SIZE` (default 12; smaller decks for quick testing).
+
+## How it's built
+
+- **Next.js App Router + TypeScript.** Server components for shells, client components for the live board. No Supabase — no third-party auth, database, or storage service.
+- **Server-authoritative game engine** (`src/lib/game.ts`). Every mutation — join, ready, secret, question, answer, elimination, guess, rematch, delete — is validated in a transaction against the room state machine (PRD §10.1) before any write, with idempotency keys for safe retries.
+- **One redaction point** (`src/lib/snapshot.ts`). Everything a client renders comes from a per-viewer snapshot: your own deck always; the opponent's cards only from the active round; their secret only after the reveal; your eliminations only ever yours. The integration test asserts nothing in the payload singles out the secret card.
+- **Realtime over SSE** (`src/lib/bus.ts`, `/api/rooms/[id]/events`). One private channel per room, membership-checked before the stream opens. Events carry ids and enums only; clients refetch the authorized snapshot, so canonical state is always the database.
+- **Anonymous identity** via a server-issued UUID in a signed HTTP-only cookie (`src/lib/auth.ts`). Invite links carry a high-entropy token; only its hash is stored.
+- **Private photo pipeline.** Photos are cropped to card size in the browser (originals never upload), stored outside any public directory, and served only through `/api/images/[cardId]` with owner/room/phase authorization. SQLite via better-sqlite3, schema written to port to managed Postgres.
+- **Trust & safety per PRD §13**: consent + adults-only confirmation before readiness, team-safe prompt policy (custom questions disabled), skip-without-penalty answers, immediate deck deletion, 24-hour retention sweep, no-PII analytics, noindex room pages.
 
 ## What's here
 
-- **[`index.html`](index.html)** — the landing page: hero, "Before you play" spec sheet, and the five-step "How to play" walkthrough.
-- **[Product Requirements Document](docs/PRD.md)** — build-ready draft (v0.9) covering game design, modes, functional requirements, architecture, data model, privacy, analytics, and build sequence.
-- **[Reference images](docs/reference/)** — visual references collected during product definition, including the warm frosted-card style direction the landing page follows.
+- **`src/`** — the application (see above).
+- **`scripts/integration-test.mjs`** — 44 checks covering the PRD's §16 acceptance criteria and Appendix B security cases: non-member isolation, secret non-leakage, turn/state enforcement, private eliminations, wrong-guess resolution, rematch, deletion.
+- **[`index.html`](index.html)** — static marketing-page prototype (the live landing page is `src/app/page.tsx`).
+- **[Product Requirements Document](docs/PRD.md)** — build-ready draft (v0.9).
+- **[Reference images](docs/reference/)** — visual references, including the warm frosted-card style direction the product follows.
 
-## At a glance
+## Not yet built (v1.1+ per PRD §6.2)
 
-- **Platform:** link-first responsive web app (Next.js + server-side Postgres + WebSockets + private S3-compatible storage), designed to sit beside any phone or video call — no extension, meeting-platform integration, or native app in v1.
-- **MVP mode:** Quick Room — create a private two-player room, share one link, play anonymously with one-time decks that expire automatically.
-- **Commercial wedge:** Team Sessions for remote/hybrid teams (onboarding, offsites, team socials), added in v1.1 on the same two-player engine.
-- **Non-negotiable:** privacy and consent are part of the core experience — private rooms, short retention, immediate deletion, no facial recognition, no public people graph.
-
-See the [PRD](docs/PRD.md) for the full product definition and build sequence.
+Team Session events (organizer lobby, pairing, status dashboard), saved decks / recoverable accounts, CAPTCHA on anonymous sign-up, spicy prompt pack, payments. The data model and engine were shaped so these bolt on without rebuilding the game loop.

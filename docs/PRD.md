@@ -282,7 +282,7 @@ The first turn should teach the game in place: ask a yes/no question, wait for t
 
 ## 11. Technical architecture
 
-> **Recommended stack:** Next.js App Router and TypeScript for the web application; managed Postgres (for example Neon or RDS) accessed only from the server through Drizzle or Prisma; WebSockets for realtime synchronization (a Node WebSocket server, or a managed pub/sub such as Ably or Pusher if self-hosting is premature); private S3-compatible object storage for images; anonymous identity via signed HTTP-only session cookies. Deploy the Next.js application on Vercel or an equivalent host that supports the chosen WebSocket approach.
+> **Recommended stack:** Next.js App Router and TypeScript for the web application; managed Postgres (for example Neon or RDS) accessed only from the server through a typed data layer; realtime synchronization over Server-Sent Events or WebSockets (SSE needs no custom server and suits the MVP's thin id-only events; a Node WebSocket server or managed pub/sub such as Ably or Pusher is the scale-out path); private S3-compatible object storage for images; anonymous identity via signed HTTP-only session cookies. Deploy the Next.js application on Vercel or an equivalent host that supports the chosen realtime approach.
 
 ### 11.1 Application structure
 
