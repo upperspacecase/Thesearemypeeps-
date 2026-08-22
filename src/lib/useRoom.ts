@@ -1,20 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Snapshot } from "./snapshot";
 import { api, actionKey } from "./client";
 
-// Live room state: authorized snapshot + SSE channel. Events are thin
-// (ids/enums only); anything content-bearing triggers a snapshot refetch,
-// so the client always converges on canonical server state (§10.2).
+// Live room state: authorized snapshot + SSE channel + polling fallback.
+// SSE gives low latency when both players hit the same server process;
+// polling keeps the game moving on serverless hosts, where instances don't
+// share the in-memory bus. Either way the client always converges on the
+// canonical server snapshot (§10.2). Presence comes from the snapshot
+// (last-seen stamps), so it works everywhere.
+
+const POLL_MS = 3500;
 
 export function useRoom(roomId: string) {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
-  const [oppOnline, setOppOnline] = useState(false);
-  const snapRef = useRef<Snapshot | null>(null);
-  snapRef.current = snap;
 
   const refresh = useCallback(async () => {
     try {
@@ -23,35 +25,41 @@ export function useRoom(roomId: string) {
         setDenied(true);
         return;
       }
+      if (!res.ok) return; // transient server hiccup; next poll retries
       const data = (await res.json()) as Snapshot;
       setSnap(data);
-      setError(null);
     } catch {
-      // transient; SSE reconnect or next event will retry
+      // transient network error; next poll retries
     }
   }, [roomId]);
 
   useEffect(() => {
     let disposed = false;
     refresh();
+
     const es = new EventSource(`/api/rooms/${roomId}/events`);
     es.onopen = () => refresh();
     es.onmessage = (e) => {
       if (disposed) return;
       try {
-        const ev = JSON.parse(e.data) as { type: string; online?: string[] };
-        if (ev.type === "player.presence") {
-          const me = snapRef.current?.me.id;
-          setOppOnline((ev.online ?? []).some((id) => id !== me));
-          return;
-        }
-        if (ev.type === "connected") return;
-        refresh();
+        const ev = JSON.parse(e.data) as { type: string };
+        if (ev.type !== "connected" && ev.type !== "player.presence") refresh();
       } catch {}
     };
+
+    const poll = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, POLL_MS);
+    const onVisible = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       disposed = true;
       es.close();
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [roomId, refresh]);
 
@@ -72,6 +80,8 @@ export function useRoom(roomId: string) {
     },
     [roomId]
   );
+
+  const oppOnline = snap?.opponent?.online ?? false;
 
   return { snap, error, setError, denied, oppOnline, refresh, action };
 }

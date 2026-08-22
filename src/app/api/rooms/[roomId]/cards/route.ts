@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
 import { getUserId } from "@/lib/auth";
 import { addCard } from "@/lib/game";
-import { sniffImage, saveCardImage, deleteCardImage, MAX_IMAGE_BYTES } from "@/lib/storage";
+import { sniffImage, MAX_IMAGE_BYTES } from "@/lib/storage";
 import { errorResponse } from "@/lib/api";
 import { rateLimit } from "@/lib/ratelimit";
 
 // Multipart card upload. The client crops/resizes to card dimensions first
-// (§11.3); the server verifies magic bytes and size, stores into the private
-// upload dir, then registers the card — removing the file if validation of
-// the card itself fails, so no orphaned object survives (Appendix B).
+// (§11.3); the server verifies magic bytes and size, then stores the card
+// row and image bytes in one transaction — no orphaned object can survive.
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ roomId: string }> }) {
   try {
@@ -25,19 +23,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ roomId: st
     if (!(file instanceof Blob)) return NextResponse.json({ error: "Missing image file" }, { status: 400 });
     if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Image too large (2 MB max)" }, { status: 413 });
 
-    const buf = Buffer.from(await file.arrayBuffer());
-    const kind = sniffImage(buf);
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const kind = sniffImage(bytes);
     if (!kind) return NextResponse.json({ error: "Use a JPEG, PNG, or WebP photo" }, { status: 415 });
 
-    const cardId = randomUUID();
-    const storagePath = saveCardImage(cardId, buf, kind.ext);
-    try {
-      const card = addCard(userId, roomId, { name, relationship, storagePath });
-      return NextResponse.json({ cardId: card.id, imageUrl: `/api/images/${card.id}` });
-    } catch (err) {
-      deleteCardImage(storagePath);
-      throw err;
-    }
+    const card = await addCard(userId, roomId, { name, relationship, image: { bytes, mime: kind.mime } });
+    return NextResponse.json({ cardId: card.id, imageUrl: `/api/images/${card.id}` });
   } catch (err) {
     return errorResponse(err);
   }

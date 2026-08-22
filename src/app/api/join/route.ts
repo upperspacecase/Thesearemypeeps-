@@ -9,9 +9,9 @@ import { track } from "@/lib/analytics";
 // GET /api/join?token=… — invite preview (no membership created)
 export async function GET(req: NextRequest) {
   try {
-    sweepExpired();
+    await sweepExpired();
     const token = req.nextUrl.searchParams.get("token") ?? "";
-    const info = peekInvite(token);
+    const info = await peekInvite(token);
     track("invite_opened", { roomId: info.roomId });
     return NextResponse.json(info);
   } catch (err) {
@@ -27,7 +27,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     if (typeof body.token !== "string") return NextResponse.json({ error: "Missing token" }, { status: 400 });
     track("join_started", {});
-    const { roomId } = joinByToken(userId, body.token, typeof body.displayName === "string" ? body.displayName : undefined);
+    const { roomId } = await joinByToken(
+      userId,
+      body.token,
+      typeof body.displayName === "string" ? body.displayName : undefined
+    );
     return NextResponse.json({ roomId });
   } catch (err) {
     return errorResponse(err);

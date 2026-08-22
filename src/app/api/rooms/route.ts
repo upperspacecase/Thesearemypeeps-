@@ -7,11 +7,11 @@ import { errorResponse } from "@/lib/api";
 
 export async function POST(req: NextRequest) {
   try {
-    sweepExpired();
+    await sweepExpired();
     const userId = await ensureUser();
     rateLimit(`create:${userId}`, 10, 3600_000); // 10 rooms/hour/user
     const body = await req.json().catch(() => ({}));
-    const { roomId, inviteToken } = createRoom(userId, {
+    const { roomId, inviteToken } = await createRoom(userId, {
       displayName: typeof body.displayName === "string" ? body.displayName : undefined,
       promptPolicy: typeof body.promptPolicy === "string" ? body.promptPolicy : undefined,
     });

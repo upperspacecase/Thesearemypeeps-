@@ -12,8 +12,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ roomId: str
   const userId = await getUserId();
   if (!userId) return new Response("No session", { status: 401 });
   try {
-    getRoom(roomId);
-    getMembership(roomId, userId);
+    await getRoom(roomId);
+    await getMembership(roomId, userId);
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

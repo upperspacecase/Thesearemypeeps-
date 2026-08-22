@@ -21,7 +21,18 @@ npm run typecheck                 # strict TypeScript
 npm run test:integration          # full two-player game over the API (server must be running)
 ```
 
-Useful environment variables: `IGC_SECRET` (cookie-signing secret — set in production), `IGC_DATA_DIR` (database + uploads location), `IGC_DECK_SIZE` (default 12; smaller decks for quick testing).
+Useful environment variables: `IGC_SECRET` (cookie-signing secret — set in production), `DATABASE_URL` (Postgres connection string — switches storage from local SQLite to Postgres), `IGC_DATA_DIR` (SQLite location), `IGC_DECK_SIZE` (default 12; smaller decks for quick testing).
+
+## Deploy on Vercel
+
+The app auto-detects its storage: with no configuration it uses a local SQLite file (laptops, VPSes); when `DATABASE_URL` is set it runs everything — game state **and photo bytes** — in Postgres, which is what serverless hosts like Vercel require (they have no persistent disk).
+
+1. Import the repo into Vercel (framework: Next.js, no special settings).
+2. In the project's **Storage** tab, create a **Neon Postgres** database (free tier) and connect it — Vercel injects `DATABASE_URL` automatically.
+3. In **Settings → Environment Variables**, add `IGC_SECRET` set to a long random string.
+4. Redeploy. The schema creates itself on first request.
+
+On serverless, realtime falls back from SSE to short polling (a few seconds of latency — fine for a turn-based game), and presence comes from last-seen stamps in the database, so nothing depends on server memory.
 
 ## How it's built
 

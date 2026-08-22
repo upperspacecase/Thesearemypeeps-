@@ -30,7 +30,7 @@ export async function getUserId(): Promise<string | null> {
   const jar = await cookies();
   const uid = verify(jar.get(COOKIE)?.value);
   if (!uid) return null;
-  const row = db().prepare("SELECT id FROM profiles WHERE id = ?").get(uid);
+  const row = await db().get("SELECT id FROM profiles WHERE id = ?", [uid]);
   return row ? uid : null;
 }
 
@@ -42,13 +42,14 @@ export async function ensureUser(): Promise<string> {
   const jar = await cookies();
   const existing = verify(jar.get(COOKIE)?.value);
   if (existing) {
-    const row = db().prepare("SELECT id FROM profiles WHERE id = ?").get(existing);
+    const row = await db().get("SELECT id FROM profiles WHERE id = ?", [existing]);
     if (row) return existing;
   }
   const id = randomUUID();
-  db()
-    .prepare("INSERT INTO profiles (id, display_name, is_anonymous, created_at, updated_at) VALUES (?, '', 1, ?, ?)")
-    .run(id, now(), now());
+  await db().run(
+    "INSERT INTO profiles (id, display_name, is_anonymous, created_at, updated_at) VALUES (?, '', 1, ?, ?)",
+    [id, now(), now()]
+  );
   jar.set(COOKIE, `${id}.${sign(id)}`, {
     httpOnly: true,
     sameSite: "lax",
