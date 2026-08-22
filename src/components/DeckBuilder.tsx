@@ -129,8 +129,9 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         Bring 5 to 15 people from your life
       </h1>
       <p className="dim small" style={{ maxWidth: "52ch", marginBottom: 20 }}>
-        Add photos, then type each person&rsquo;s first name under their picture. Five gets you playing; more people
-        make the guessing harder. Your opponent sees them only once the round starts.
+        Select all your photos in one go — the picker lets you tap several at once — then type each person&rsquo;s
+        first name under their picture. Five gets you playing; more people make the guessing harder. Your opponent
+        sees them only once the round starts.
       </p>
 
       <div style={{ marginBottom: 22, maxWidth: 360 }}>
@@ -192,8 +193,13 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
       {!ready && !full && (
         <div style={{ display: "grid", gap: 12, maxWidth: 460, marginBottom: 8 }}>
           <button className="btn ghost" onClick={() => fileInput.current?.click()} disabled={uploading > 0}>
-            {uploading > 0 ? "Uploading…" : "Add photos"}
+            {uploading > 0 ? "Uploading…" : cards.length === 0 ? "Add photos — tap several at once" : "Add more photos"}
           </button>
+          {cards.length === 0 && (
+            <p className="small dim" style={{ marginTop: -4 }}>
+              In your photo picker, tap every person you want — they all come in together.
+            </p>
+          )}
           <input
             ref={fileInput}
             type="file"
