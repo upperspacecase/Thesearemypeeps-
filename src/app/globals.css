@@ -124,7 +124,6 @@ button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none
   padding: 6px 12px; border-radius: 999px;
 }
 .swipe-label.no { background: var(--ember-shadow); color: var(--cream); }
-.swipe-label.yes { background: var(--cream); color: var(--ink); transform: translate(-50%, -50%) rotate(4deg); }
 
 /* sticky turn bar */
 .turnbar {

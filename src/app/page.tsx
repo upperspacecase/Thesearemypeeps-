@@ -50,7 +50,7 @@ const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.R
   { title: "Make your board", body: "Upload 5 to 15 people from your life. Add a photo and first name for each one. More people means a harder, longer game.", visual: <MiniBoard /> },
   {
     title: "Choose someone secretly",
-    body: "Pick one person from your board. The other player can see everyone you brought—but not who you chose.",
+    body: "Everyone goes on one board — your people and theirs together. Pick anyone on it, even someone they brought. The other player sees the whole board, but never who you chose.",
     visual: <MiniBoard secret={2} />,
   },
   {
@@ -61,7 +61,7 @@ const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.R
   },
   {
     title: "Swipe people away and make your guess",
-    body: "Use each answer to clear the board: swipe left when it's not this person, swipe right if it still could be them. Guess when you think you know who remains.",
+    body: "Use each answer to clear the board — swipe someone left when it's not this person. Guess when you think you know who's left.",
     visual: <MiniBoard down={[0, 1, 3, 4, 5, 6, 8, 9, 10, 11]} />,
   },
   {

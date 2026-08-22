@@ -69,7 +69,7 @@ Friends, dates, couples, siblings, and small social groups use a free one-to-one
 ### 5.1 Decks and hidden choices
 
 - Each player brings a deck of **12 people** for the MVP. Twelve is enough to create deduction without making setup feel like work. A 16- or 24-card option can follow after testing.
-- A card contains a photo and the person's first name or nickname. An optional relationship label (for example, "cousin" or "old flatmate") may be revealed only after the round.
+- A card contains a photo and the person's first name or nickname — nothing else. No relationship labels or notes: the context comes out in conversation, not on the card.
 - Each player secretly chooses one person from their own deck. The secret selection is never sent to the opponent's client.
 - Each player's board displays the opponent's deck. Players never guess from their own deck.
 - Photos are cropped into a consistent card ratio, but the original file is not exposed to the opponent.
@@ -184,7 +184,7 @@ The paid hypothesis cannot be validated with a friends-only prototype forever. O
 |---|---|---|
 | FR-10 | Upload exactly 12 valid cards before marking the deck ready; show progress as x/12. | Must |
 | FR-11 | Accept common phone and web image formats; normalize orientation, resize, and crop before storage. | Must |
-| FR-12 | Each card requires a first name or nickname. Relationship label and short note are optional and hidden during play. | Must |
+| FR-12 | Each card carries exactly a photo and a first name or nickname. No relationship labels or notes are collected. | Must |
 | FR-13 | Users can crop, reorder, replace, or remove a card before the round begins. | Must |
 | FR-14 | The user must confirm permission to share the images in a private game and confirm that every depicted person is an adult. | Must |
 | FR-15 | The interface explains exactly who can see the deck and for how long before upload. | Must |
@@ -332,7 +332,7 @@ Identifiers should be UUIDs. Every table includes created_at and updated_at wher
 |---|---|---|
 | profiles | id (auth user), display_name, account_type, is_anonymous | Owner; minimal room-member projection |
 | decks | id, owner_id, title, persistence, expires_at, consent_version, status | Owner only except active room projection |
-| person_cards | id, deck_id, display_name, relationship_label, storage_path, sort_order | Owner; authorized opponent gets game-safe fields only |
+| person_cards | id, deck_id, display_name, sort_order (+ image bytes) | Both players once the shared board is live |
 | rooms | id, host_id, mode, status, invite_token_hash, prompt_policy, expires_at | Room members; token never returned after exchange |
 | room_players | room_id, user_id, seat, ready_at, joined_at, deck_id | Room members; constrained to two seats |
 | rounds | id, room_id, number, status, active_player_id, winner_id, started_at, ended_at | Room members |
@@ -471,7 +471,7 @@ These are testable launch hypotheses, not forecasts. Replace them with observed 
 | Deck size | Start at exactly 12. Test 16 only if setup is fast and rounds feel too short. |
 | Wrong guess | Start with a wrong guess ending the round. It creates a real decision and simpler completion logic. |
 | Names on cards | Show first names or nicknames during play. Learning names is part of the desired outcome. |
-| Relationship labels | Collect optionally but reveal after the round so they do not collapse deduction too early. |
+| Relationship labels | Do not collect them. A card is a face and a name; the relationship is what the questions are for. |
 | "Tell me why" | Keep optional and off-platform. Measure use through a tap, but never record the spoken story. |
 | Saved decks | Keep outside the first anonymous loop unless repeated setup blocks replay. |
 | Spicy mode | Test only with consenting adult friend pairs; do not make it part of the initial workplace pilot. |

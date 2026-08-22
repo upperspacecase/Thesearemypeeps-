@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ roomId: st
         await game.removeCard(userId, roomId, String(body.cardId ?? ""));
         break;
       case "rename_card":
-        await game.renameCard(userId, roomId, String(body.cardId ?? ""), String(body.name ?? ""), body.relationship);
+        await game.renameCard(userId, roomId, String(body.cardId ?? ""), String(body.name ?? ""));
         break;
       case "move_card":
         await game.moveCard(userId, roomId, String(body.cardId ?? ""), body.direction === "up" ? "up" : "down");

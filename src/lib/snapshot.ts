@@ -23,8 +23,10 @@ import { suggestionsFor } from "./prompts";
 export interface CardView {
   id: string;
   name: string;
-  relationship: string | null; // only revealed post-round
   imageUrl: string;
+  /** Whether the viewer brought this person. Not shown on the board — the
+   *  cards are deliberately undifferentiated — but used by tests/analytics. */
+  mine: boolean;
 }
 
 export async function buildSnapshot(roomId: string, viewerId: string) {
@@ -47,11 +49,11 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
   const cardsOf = (deckId: string) =>
     db().all<PersonCardRow>("SELECT * FROM person_cards WHERE deck_id = ? ORDER BY sort_order", [deckId]);
 
-  const toView = (c: PersonCardRow, revealLabels: boolean): CardView => ({
+  const toView = (c: PersonCardRow, mine: boolean): CardView => ({
     id: c.id,
     name: c.display_name,
-    relationship: revealLabels ? c.relationship_label : null,
     imageUrl: `/api/images/${c.id}`,
+    mine,
   });
 
   const me = seats.find((s) => s.user_id === viewerId)!;
@@ -60,12 +62,15 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
   const myDeck = await deckOf(viewerId);
   const myCards = myDeck ? await cardsOf(myDeck.id) : [];
 
-  const boardVisible = round
-    ? ["active", "completed"].includes(round.status) && room.status !== "secret_selection"
-    : false;
+  // One shared board of everyone's people. It exists as soon as a round does
+  // (both players ready) — secrets are chosen from it, so it must be visible
+  // through secret selection, play, and the reveal.
+  const boardVisible = !!round;
   const oppDeck = opponent ? await deckOf(opponent.user_id) : undefined;
   const oppAllCards = opponent && oppDeck ? await cardsOf(oppDeck.id) : [];
-  const oppCards = boardVisible ? oppAllCards : [];
+  const board = boardVisible
+    ? [...oppAllCards.map((c) => toView(c, false)), ...myCards.map((c) => toView(c, true))]
+    : [];
 
   // Questions + answers for the current round (room members only, §12).
   const questions = round
@@ -165,11 +170,11 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
           ready: !!opponent.ready_at,
           online: isOnline(opponent),
           deckCount: oppAllCards.length,
-          board: oppCards.map((c) => toView(c, roundDone)),
           secretCardId: oppSecret?.person_card_id ?? null, // null until reveal
           rematchRequested: rematchVotes.includes(opponent.user_id),
         }
       : null,
+    board,
     round: round
       ? {
           number: round.number,

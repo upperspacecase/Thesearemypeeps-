@@ -19,7 +19,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ roomId: st
     const form = await req.formData();
     const file = form.get("file");
     const name = String(form.get("name") ?? "");
-    const relationship = form.get("relationship") ? String(form.get("relationship")) : undefined;
     if (!(file instanceof Blob)) return NextResponse.json({ error: "Missing image file" }, { status: 400 });
     if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Image too large (2 MB max)" }, { status: 413 });
 
@@ -27,7 +26,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ roomId: st
     const kind = sniffImage(bytes);
     if (!kind) return NextResponse.json({ error: "Use a JPEG, PNG, or WebP photo" }, { status: 415 });
 
-    const card = await addCard(userId, roomId, { name, relationship, image: { bytes, mime: kind.mime } });
+    const card = await addCard(userId, roomId, { name, image: { bytes, mime: kind.mime } });
     return NextResponse.json({ cardId: card.id, imageUrl: `/api/images/${card.id}` });
   } catch (err) {
     return errorResponse(err);

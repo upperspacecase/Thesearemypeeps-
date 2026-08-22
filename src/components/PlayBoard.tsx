@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RoomApi } from "@/lib/useRoom";
 
-const SWIPE_THRESHOLD = 70; // px of horizontal drag that commits a swipe
+const SWIPE_THRESHOLD = 70; // px of leftward drag that removes someone
 const LABEL_THRESHOLD = 28; // px before the swipe label appears
 
 interface Drag {
@@ -45,9 +45,10 @@ export function PlayBoard({ room }: { room: RoomApi }) {
   const iAmAsker = openQ?.askerId === snap.me.id;
   const mustAnswer = !!openQ && !iAmAsker;
   const canAct = myTurn && !openQ;
-  const secretCard = snap.me.cards.find((c) => c.id === snap.me.secretCardId);
+  const board = snap.board;
+  const secretCard = board.find((c) => c.id === snap.me.secretCardId);
   const isOut = (id: string) => overrides[id] ?? eliminated.has(id);
-  const remaining = opp.board.filter((c) => !isOut(c.id)).length;
+  const remaining = board.filter((c) => !isOut(c.id)).length;
 
   function setOut(cardId: string, out: boolean) {
     if (isOut(cardId) === out) return;
@@ -61,19 +62,19 @@ export function PlayBoard({ room }: { room: RoomApi }) {
     setDrag({ id, startX: e.clientX, startY: e.clientY, dx: 0, moved: false });
   }
   function pointerMove(e: React.PointerEvent, id: string) {
-    setDrag((d) =>
-      d && d.id === id
-        ? { ...d, dx: e.clientX - d.startX, moved: d.moved || Math.abs(e.clientX - d.startX) > 6 }
-        : d
-    );
+    setDrag((d) => {
+      if (!d || d.id !== id) return d;
+      // Only leftward drag moves the card — swiping is for removing people.
+      const dx = Math.min(0, e.clientX - d.startX);
+      return { ...d, dx, moved: d.moved || Math.abs(e.clientX - d.startX) > 6 };
+    });
   }
   function pointerEnd(id: string) {
     const d = dragRef.current;
     setDrag(null);
     if (!d || d.id !== id) return;
     if (d.dx <= -SWIPE_THRESHOLD) setOut(id, true); // swipe left: it's not this person
-    else if (d.dx >= SWIPE_THRESHOLD) setOut(id, false); // swipe right: could still be them
-    else if (!d.moved) setOut(id, !isOut(id)); // plain tap toggles
+    else if (!d.moved) setOut(id, !isOut(id)); // tap removes, or brings back
   }
 
   async function ask(promptId?: string, text?: string) {
@@ -114,15 +115,15 @@ export function PlayBoard({ room }: { room: RoomApi }) {
 
       <div className="wrap" style={{ paddingTop: 28 }}>
         <div className="play-cols">
-          <section aria-label={`${opp.name}'s board`}>
+          <section aria-label="The board">
             <p className="eyebrow" style={{ marginBottom: 10 }}>
-              {opp.name}&rsquo;s people {guessMode && "— tap your guess"}
+              Everyone&rsquo;s people {guessMode && "— tap your guess"}
             </p>
             <div className="board-grid">
-              {opp.board.map((c) => {
+              {board.map((c) => {
                 const dragging = drag?.id === c.id;
                 const dx = dragging ? drag!.dx : 0;
-                const label = dragging && Math.abs(dx) > LABEL_THRESHOLD ? (dx < 0 ? "not-them" : "keep") : null;
+                const showLabel = dragging && dx < -LABEL_THRESHOLD;
                 return (
                   <button
                     key={c.id}
@@ -146,22 +147,21 @@ export function PlayBoard({ room }: { room: RoomApi }) {
                       guessMode
                         ? `Guess ${c.name}`
                         : isOut(c.id)
-                          ? `${c.name} — removed. Tap or swipe right to bring them back`
-                          : `${c.name} — still standing. Tap or swipe left to remove them`
+                          ? `${c.name} — removed. Tap to bring them back`
+                          : `${c.name} — still standing. Swipe left or tap to remove them`
                     }
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={c.imageUrl} alt={`Photo of ${c.name}`} draggable={false} />
                     <span className="nm">{c.name}</span>
-                    {label === "not-them" && <span className="swipe-label no" aria-hidden>It&rsquo;s not this person</span>}
-                    {label === "keep" && <span className="swipe-label yes" aria-hidden>Could still be them</span>}
+                    {showLabel && <span className="swipe-label no" aria-hidden>It&rsquo;s not this person</span>}
                   </button>
                 );
               })}
             </div>
             <p className="small dim" style={{ marginTop: 12 }}>
-              Swipe left — it&rsquo;s not this person. Swipe right to bring someone back. Tapping works too. Your board
-              is private: {opp.name} never sees who you remove.
+              Swipe a card left to remove them — it&rsquo;s not this person. Tapping works too, and tapping a removed
+              card brings them back. Your board is private: {opp.name} never sees who you remove.
             </p>
           </section>
 
@@ -210,7 +210,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
                 </p>
                 {guessCard && (
                   <p style={{ marginBottom: 14 }}>
-                    Guessing <strong>{opp.board.find((c) => c.id === guessCard)?.name}</strong>
+                    Guessing <strong>{board.find((c) => c.id === guessCard)?.name}</strong>
                   </p>
                 )}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

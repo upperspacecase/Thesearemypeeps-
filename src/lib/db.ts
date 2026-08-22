@@ -69,11 +69,11 @@ function ddl(dialect: "sqlite" | "pg"): string {
     UNIQUE (owner_id, room_id)
   );
 
+  -- A card is a photo and a first name. Nothing else: no notes, no labels.
   CREATE TABLE IF NOT EXISTS person_cards (
     id TEXT PRIMARY KEY,
     deck_id TEXT NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
     display_name TEXT NOT NULL,
-    relationship_label TEXT,
     sort_order INTEGER NOT NULL,
     created_at TEXT NOT NULL
   );
@@ -355,7 +355,6 @@ export interface PersonCardRow {
   id: string;
   deck_id: string;
   display_name: string;
-  relationship_label: string | null;
   sort_order: number;
 }
 export interface RoundRow {

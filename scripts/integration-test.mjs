@@ -102,7 +102,7 @@ ok(third.status === 403, "third player is refused (room locked at two seats)");
 
 let snapB = (await B.snapshot(roomId)).data;
 ok(snapB.room.status === "deck_setup", "room moves to deck_setup with two players");
-ok(snapB.opponent && snapB.opponent.board.length === 0, "opponent deck hidden during setup");
+ok(snapB.board.length === 0, "shared board hidden during setup");
 
 await B.uploadDeck(roomId, "B", size);
 const aCardId = (await A.snapshot(roomId)).data.me.cards[0].id;
@@ -119,10 +119,13 @@ let snapA = (await A.snapshot(roomId)).data;
 ok(snapA.room.status === "secret_selection", "both ready → secret selection");
 
 console.log("— secrets");
-const aSecret = snapA.me.cards[2].id;
-await A.action(roomId, { type: "select_secret", cardId: aSecret });
-const wrongDeck = await B.action(roomId, { type: "select_secret", cardId: aSecret });
-ok(wrongDeck.status === 403 || wrongDeck.status === 400, "cannot choose a secret from the opponent's deck");
+ok(snapA.board.length === size * 2, "the shared board (both decks) is visible at secret selection");
+// One board: A's secret is one of B's people, proving cross-deck selection.
+const aSecret = snapA.board.find((c) => !c.mine).id;
+const crossPick = await A.action(roomId, { type: "select_secret", cardId: aSecret });
+ok(crossPick.status === 200, "a secret can be chosen from the other player's people");
+const bogusSecret = await B.action(roomId, { type: "select_secret", cardId: crypto.randomUUID() });
+ok(bogusSecret.status === 403 || bogusSecret.status === 404, "a secret must be a person on this board");
 snapB = (await B.snapshot(roomId)).data;
 const bSecret = snapB.me.cards[4].id;
 await B.action(roomId, { type: "select_secret", cardId: bSecret });
@@ -136,13 +139,17 @@ ok(snapA.opponent.secretCardId === null, "opponent's secret is not in the snapsh
 // it out. So its id must occur in the payload exactly as often as a control
 // non-secret card's id does.
 const count = (haystack, needle) => haystack.split(needle).length - 1;
+// A card the viewer owns naturally appears in both me.cards and board, so
+// the control card must come from the same deck as the secret being checked.
+const sameDeckControl = (snap, secretId) => {
+  const sec = snap.board.find((c) => c.id === secretId);
+  return snap.board.find((c) => c.mine === sec.mine && c.id !== aSecret && c.id !== bSecret).id;
+};
 const jsonA = JSON.stringify(snapA);
-const controlB = snapA.opponent.board.find((c) => c.id !== bSecret).id;
-ok(count(jsonA, bSecret) === count(jsonA, controlB), "nothing in A's payload singles out B's secret card");
+ok(count(jsonA, bSecret) === count(jsonA, sameDeckControl(snapA, bSecret)), "nothing in A's payload singles out B's secret card");
 const jsonB = JSON.stringify(snapB);
-const controlA = snapB.opponent.board.find((c) => c.id !== aSecret).id;
-ok(count(jsonB, aSecret) === count(jsonB, controlA), "nothing in B's payload singles out A's secret card");
-ok(snapB.opponent.board.length === size, "board (opponent deck) is now visible");
+ok(count(jsonB, aSecret) === count(jsonB, sameDeckControl(snapB, aSecret)), "nothing in B's payload singles out A's secret card");
+ok(snapB.board.length === size * 2, "everyone's people are on the play board");
 
 console.log("— turns");
 const active = snapA.round.activePlayerId;
@@ -166,14 +173,18 @@ respSnap = (await inactive.snapshot(roomId)).data;
 ok(respSnap.round.myTurn === true, "turn passes to the responder after answering");
 
 console.log("— eliminations");
-const targetCard = (await activeC.snapshot(roomId)).data.opponent.board[1].id;
+const elimSnap = (await activeC.snapshot(roomId)).data;
+const targetCard = elimSnap.board.find((c) => !c.mine).id;
 await activeC.action(roomId, { type: "set_elimination", cardId: targetCard, eliminated: true });
 snapA = (await activeC.snapshot(roomId)).data;
 ok(snapA.me.eliminatedCardIds.includes(targetCard), "elimination persists for the actor");
 const otherView = (await inactive.snapshot(roomId)).data;
 ok(!JSON.stringify(otherView.me.eliminatedCardIds).includes(targetCard), "opponent never sees your eliminations");
-const ownCardElim = await activeC.action(roomId, { type: "set_elimination", cardId: activeC === A ? aSecret : bSecret, eliminated: true });
-ok(ownCardElim.status === 403, "cannot eliminate cards on your own deck");
+const ownCard = elimSnap.board.find((c) => c.mine).id;
+const ownCardElim = await activeC.action(roomId, { type: "set_elimination", cardId: ownCard, eliminated: true });
+ok(ownCardElim.status === 200, "your own people can be flipped too (one board)");
+const bogusElim = await activeC.action(roomId, { type: "set_elimination", cardId: crypto.randomUUID(), eliminated: true });
+ok(bogusElim.status === 403 || bogusElim.status === 404, "cannot flip a card that is not on this board");
 
 console.log("— prompts");
 const promptQ = await inactive.action(roomId, { type: "ask_question", promptId: "s3" });
@@ -186,9 +197,9 @@ await activeC.action(roomId, {
 
 console.log("— guess & reveal");
 // It's activeC's turn again. Guess wrong on purpose: pick a non-secret card.
-const board = (await activeC.snapshot(roomId)).data.opponent.board;
+const board = (await activeC.snapshot(roomId)).data.board;
 const oppSecretId = activeC === A ? bSecret : aSecret;
-const wrongCard = board.find((c) => c.id !== oppSecretId).id;
+const wrongCard = board.find((c) => c.id !== oppSecretId && c.id !== (activeC === A ? aSecret : bSecret)).id;
 const guess = await activeC.action(roomId, { type: "submit_guess", cardId: wrongCard });
 ok(guess.status === 200, "guess accepted");
 snapA = (await A.snapshot(roomId)).data;

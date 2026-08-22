@@ -24,7 +24,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ cardId: st
       userId,
     ]);
     const room = await db().get<RoomRow>("SELECT * FROM rooms WHERE id = ?", [deck.room_id]);
-    allowed = !!member && !!room && ["active", "completed", "rematch"].includes(room.status);
+    // The shared board (both decks) is visible from secret selection onward.
+    allowed = !!member && !!room && ["secret_selection", "active", "completed", "rematch"].includes(room.status);
   }
   if (!allowed) return new NextResponse(null, { status: 403 });
 

@@ -93,6 +93,15 @@ async function opponentOf(roomId: string, userId: string): Promise<RoomPlayerRow
   return (await players(roomId)).find((p) => p.user_id !== userId);
 }
 
+/** True when the card sits in either player's (non-deleted) deck in this room. */
+async function cardInRoom(roomId: string, cardId: string): Promise<boolean> {
+  const row = await db().get(
+    "SELECT 1 AS x FROM person_cards pc JOIN decks d ON d.id = pc.deck_id WHERE pc.id = ? AND d.room_id = ? AND d.status != 'deleted'",
+    [cardId, roomId]
+  );
+  return !!row;
+}
+
 // ---------------------------------------------------------------- creation
 
 export async function createRoom(userId: string, opts: { displayName?: string; promptPolicy?: string }) {
@@ -194,7 +203,7 @@ export async function setDisplayName(userId: string, roomId: string, name: strin
 export async function addCard(
   userId: string,
   roomId: string,
-  card: { name: string; relationship?: string; image: { bytes: Buffer; mime: string } }
+  card: { name: string; image: { bytes: Buffer; mime: string } }
 ): Promise<{ id: string }> {
   const room = await getRoom(roomId);
   await getMembership(roomId, userId);
@@ -210,9 +219,8 @@ export async function addCard(
   const id = randomUUID();
   await db().tx(async (x) => {
     await x.run(
-      `INSERT INTO person_cards (id, deck_id, display_name, relationship_label, sort_order, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, deck.id, name, card.relationship?.trim().slice(0, 40) || null, existing.length, now()]
+      `INSERT INTO person_cards (id, deck_id, display_name, sort_order, created_at) VALUES (?, ?, ?, ?, ?)`,
+      [id, deck.id, name, existing.length, now()]
     );
     await x.run("INSERT INTO card_images (card_id, mime, bytes) VALUES (?, ?, ?)", [id, card.image.mime, card.image.bytes]);
   });
@@ -246,18 +254,14 @@ export async function removeCard(userId: string, roomId: string, cardId: string)
   publish(roomId, { type: "deck.progress", userId });
 }
 
-export async function renameCard(userId: string, roomId: string, cardId: string, name: string, relationship?: string) {
+export async function renameCard(userId: string, roomId: string, cardId: string, name: string) {
   await getMembership(roomId, userId);
   const deck = await deckFor(roomId, userId);
   if (!deck || !(await cardsOf(deck.id)).some((c) => c.id === cardId))
     throw new GameError("That card is not in your deck", 404);
   const clean = name.trim().slice(0, 30);
   if (!clean) throw new GameError("Every card needs a first name or nickname");
-  await db().run("UPDATE person_cards SET display_name = ?, relationship_label = ? WHERE id = ?", [
-    clean,
-    relationship?.trim().slice(0, 40) || null,
-    cardId,
-  ]);
+  await db().run("UPDATE person_cards SET display_name = ? WHERE id = ?", [clean, cardId]);
 }
 
 export async function moveCard(userId: string, roomId: string, cardId: string, direction: "up" | "down") {
@@ -358,9 +362,9 @@ export async function selectSecret(userId: string, roomId: string, cardId: strin
   if (room.status !== "secret_selection") throw new GameError("Secrets are only chosen before the round starts");
   const round = await currentRound(roomId);
   if (!round || round.status !== "secret_selection") throw new GameError("No round awaiting secrets", 409);
-  const deck = await deckFor(roomId, userId);
-  if (!deck || !(await cardsOf(deck.id)).some((c) => c.id === cardId))
-    throw new GameError("You can only choose a secret from your own deck", 403);
+  // The secret pool is the whole board: your people AND theirs (one board).
+  if (!(await cardInRoom(roomId, cardId)))
+    throw new GameError("Choose a secret from the people on this board", 403);
 
   await db().run(
     `INSERT INTO round_secrets (round_id, owner_id, person_card_id) VALUES (?, ?, ?)
@@ -472,12 +476,10 @@ export async function setElimination(userId: string, roomId: string, cardId: str
   await getRoom(roomId);
   await getMembership(roomId, userId);
   const round = await activeRound(roomId);
-  // Cards you eliminate belong to the opponent's deck (FR-24).
-  const opp = await opponentOf(roomId, userId);
-  if (!opp) throw new GameError("No opponent yet", 409);
-  const oppDeck = await deckFor(roomId, opp.user_id);
-  if (!oppDeck || !(await cardsOf(oppDeck.id)).some((c) => c.id === cardId))
-    throw new GameError("You can only eliminate cards on the opponent's board", 403);
+  // Any card on the shared board can be flipped — the opponent's secret
+  // might be one of your own people. Eliminations stay private (FR-24).
+  if (!(await cardInRoom(roomId, cardId)))
+    throw new GameError("That card is not on this board", 403);
 
   await db().run(
     `INSERT INTO eliminations (round_id, player_id, person_card_id, eliminated, updated_at) VALUES (?, ?, ?, ?, ?)
@@ -497,9 +499,7 @@ export async function submitGuess(userId: string, roomId: string, cardId: string
 
   const opp = await opponentOf(roomId, userId);
   if (!opp) throw new GameError("No opponent yet", 409);
-  const oppDeck = await deckFor(roomId, opp.user_id);
-  if (!oppDeck || !(await cardsOf(oppDeck.id)).some((c) => c.id === cardId))
-    throw new GameError("Guess a person from the opponent's board", 403);
+  if (!(await cardInRoom(roomId, cardId))) throw new GameError("Guess a person from this board", 403);
 
   const secret = await db().get<{ person_card_id: string }>(
     "SELECT person_card_id FROM round_secrets WHERE round_id = ? AND owner_id = ?",

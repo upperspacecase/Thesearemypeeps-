@@ -8,6 +8,8 @@ export function SecretSelect({ room }: { room: RoomApi }) {
   const [picked, setPicked] = useState<string | null>(null);
   if (!snap) return null;
   const confirmed = snap.me.secretCardId;
+  const board = snap.board;
+  const chosen = board.find((c) => c.id === (picked ?? confirmed));
 
   return (
     <main className="narrow" style={{ padding: "48px 24px 90px" }}>
@@ -17,12 +19,12 @@ export function SecretSelect({ room }: { room: RoomApi }) {
           Choose someone secretly
         </h1>
         <p className="dim small" style={{ maxWidth: "52ch", marginBottom: 24 }}>
-          {snap.opponent?.name ?? "The other player"} will try to guess who you chose. They can see everyone you brought
-          — but never who you picked.
+          Everyone is on one board — your people and {snap.opponent?.name ?? "theirs"}&rsquo;s. Pick anyone.{" "}
+          {snap.opponent?.name ?? "The other player"} will see the whole board too, but never who you chose.
         </p>
 
         <div className="board-grid" style={{ marginBottom: 26 }}>
-          {snap.me.cards.map((c) => (
+          {board.map((c) => (
             <button
               key={c.id}
               className={`pcard ${(picked ?? confirmed) === c.id ? "chosen" : ""}`}
@@ -43,7 +45,7 @@ export function SecretSelect({ room }: { room: RoomApi }) {
           </p>
         ) : (
           <button className="btn solid" disabled={!picked} onClick={() => picked && action({ type: "select_secret", cardId: picked })}>
-            {picked ? `Lock in ${snap.me.cards.find((c) => c.id === picked)?.name}` : "Tap a person to choose"}
+            {chosen ? `Lock in ${chosen.name}` : "Tap a person to choose"}
           </button>
         )}
       </section>

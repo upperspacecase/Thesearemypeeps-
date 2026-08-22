@@ -10,14 +10,11 @@ export function Reveal({ room }: { room: RoomApi }) {
   const round = snap.round;
   const opp = snap.opponent;
   const iWon = round.winnerId === snap.me.id;
-  const mySecret = snap.me.cards.find((c) => c.id === snap.me.secretCardId);
-  const theirSecret = opp.board.find((c) => c.id === opp.secretCardId);
+  const board = snap.board;
+  const mySecret = board.find((c) => c.id === snap.me.secretCardId);
+  const theirSecret = board.find((c) => c.id === opp.secretCardId);
   const finalGuess = round.guesses[round.guesses.length - 1];
-  const guessedCard =
-    finalGuess &&
-    (finalGuess.playerId === snap.me.id
-      ? opp.board.find((c) => c.id === finalGuess.cardId)
-      : snap.me.cards.find((c) => c.id === finalGuess.cardId));
+  const guessedCard = finalGuess && board.find((c) => c.id === finalGuess.cardId);
 
   return (
     <main className="narrow" style={{ padding: "48px 24px 90px" }}>
@@ -40,7 +37,7 @@ export function Reveal({ room }: { room: RoomApi }) {
               <img src={theirSecret.imageUrl} alt={`Photo of ${theirSecret.name}`} />
               <figcaption className="nm">{theirSecret.name}</figcaption>
               <p className="serif-q" style={{ color: "#8A4A2C", fontSize: 14, padding: "0 4px 6px" }}>
-                {theirSecret.relationship ?? `${opp.name}'s person`}
+                {opp.name}&rsquo;s pick
               </p>
             </figure>
           )}
@@ -49,7 +46,9 @@ export function Reveal({ room }: { room: RoomApi }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={mySecret.imageUrl} alt={`Photo of ${mySecret.name}`} />
               <figcaption className="nm">{mySecret.name}</figcaption>
-              <p className="serif-q" style={{ color: "#8A4A2C", fontSize: 14, padding: "0 4px 6px" }}>your person</p>
+              <p className="serif-q" style={{ color: "#8A4A2C", fontSize: 14, padding: "0 4px 6px" }}>
+                your pick
+              </p>
             </figure>
           )}
         </div>
