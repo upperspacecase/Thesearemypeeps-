@@ -113,7 +113,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
     const d = dragRef.current;
     setDrag(null);
     if (!d || d.id !== id) return;
-    if (d.dx <= -SWIPE_THRESHOLD) setOut(id, true); // swipe left: it's not this person
+    if (d.dx <= -SWIPE_THRESHOLD) setOut(id, !isOut(id)); // swipe toggles: a second swipe brings them back
     else if (!d.moved) openZoom(id); // tap: look closer
   }
 
@@ -156,7 +156,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
         <div className="mech">
           <p><strong style={{ color: "var(--cream)", fontWeight: 600 }}>{remaining} still standing.</strong></p>
           <p>Ask questions out loud — nothing goes through the app.</p>
-          <p><span className="mech-arrow" aria-hidden>←</span> Swipe a card left when it&rsquo;s not them.</p>
+          <p><span className="mech-arrow" aria-hidden>←</span> Swipe a card left when it&rsquo;s not them — swipe again to bring them back.</p>
           <p>Tap anyone to look closer, guess from there when you&rsquo;re sure.</p>
         </div>
         {secretCard && (

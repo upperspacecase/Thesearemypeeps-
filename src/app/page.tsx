@@ -47,26 +47,26 @@ function MiniBoard({ down = [], secret }: { down?: number[]; secret?: number }) 
 }
 
 const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.ReactNode }> = [
-  { title: "Make your board", body: "Upload 5 to 15 people from your life. Add a photo and first name for each one. More people means a harder, longer game.", visual: <MiniBoard /> },
+  { title: "Make your board", body: "Pick 5 to 15 people from your camera roll — all at once. Frame each photo and give them a first name.", visual: <MiniBoard /> },
   {
     title: "Choose someone secretly",
-    body: "Everyone goes on one board — your people and theirs together. Pick anyone on it, even someone they brought. The other player sees the whole board, but never who you chose.",
+    body: "Everyone goes on one shared board — your people and theirs. Pick anyone, even someone they brought. They'll never see who.",
     visual: <MiniBoard secret={2} />,
   },
   {
-    title: "Start asking",
-    body: "Ask yes-or-no questions out loud — in person or on your call. The app never gets between you; it just holds the board.",
+    title: "Ask out loud",
+    body: "Yes-or-no questions, face to face or on your call. Nothing goes through the app — it just holds the board.",
     qs: ["Are they wearing glasses?", "Have you known them since school?", "Are they the funniest person you know?", "Would you trust them to get you out of trouble?"],
     visual: <MiniBoard down={[1, 3, 6, 9]} />,
   },
   {
-    title: "Swipe people away and make your guess",
-    body: "Use each answer to clear the board — swipe someone left when it's not this person, tap anyone to look closer. Guess when you're sure.",
+    title: "Swipe left — it's not this person",
+    body: "Each answer clears the board. Swiped the wrong person? Swipe them again to bring them back. Tap anyone to look closer, and guess from there when you're sure.",
     visual: <MiniBoard down={[0, 1, 3, 4, 5, 6, 8, 9, 10, 11]} />,
   },
   {
     title: "Meet the person",
-    body: "At the reveal, tell the story: who are they, how did you meet, and what should the other player know about them?",
+    body: "At the reveal, tell the story: who they are, how you met, and what the other player should know about them.",
     visual: (
       <div
         aria-hidden
