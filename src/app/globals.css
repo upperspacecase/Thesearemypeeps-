@@ -108,13 +108,23 @@ button.pcard:focus-visible { outline: 3px solid var(--cream); outline-offset: 3p
 .pcard.down { opacity: 0.35; transform: rotate(-1.5deg) scale(0.96); }
 .pcard.down img { filter: grayscale(0.6) brightness(0.55); }
 .pcard.down::after {
-  content: "out"; position: absolute; top: 7px; left: 7px; right: 7px; aspect-ratio: 3/4;
+  content: "not them"; position: absolute; top: 7px; left: 7px; right: 7px; aspect-ratio: 3/4;
   display: grid; place-items: center; border-radius: 9px;
-  font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--cream);
+  font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--cream);
   background: rgba(124, 37, 4, 0.55);
 }
 .pcard.chosen { outline: 3px solid var(--glow); outline-offset: 3px; }
 .pcard.win { outline: 3px solid var(--cream); outline-offset: 3px; }
+button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.pcard.dragging { transition: none; z-index: 6; box-shadow: 0 18px 36px -14px rgba(70, 20, 2, 0.7); }
+.swipe-label {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) rotate(-4deg);
+  white-space: nowrap; pointer-events: none; z-index: 2;
+  font-family: var(--serif); font-style: italic; font-size: 15px;
+  padding: 6px 12px; border-radius: 999px;
+}
+.swipe-label.no { background: var(--ember-shadow); color: var(--cream); }
+.swipe-label.yes { background: var(--cream); color: var(--ink); transform: translate(-50%, -50%) rotate(4deg); }
 
 /* sticky turn bar */
 .turnbar {
@@ -172,6 +182,8 @@ button.pcard:focus-visible { outline: 3px solid var(--cream); outline-offset: 3p
 .progress-ticks { display: flex; align-items: center; gap: 6px; }
 .progress-ticks i { width: 3px; height: 20px; border-radius: 2px; background: rgba(255, 246, 239, 0.28); }
 .progress-ticks i.on { background: var(--cream); }
+.progress-ticks i.min { height: 28px; background: rgba(255, 246, 239, 0.5); }
+.progress-ticks i.min.on { background: var(--glow); }
 .progress-ticks em { font-style: normal; font-size: 13px; color: var(--cream-dim); margin-left: 8px; }
 
 /* answer sheet + overlays */

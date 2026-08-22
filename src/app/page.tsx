@@ -47,7 +47,7 @@ function MiniBoard({ down = [], secret }: { down?: number[]; secret?: number }) 
 }
 
 const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.ReactNode }> = [
-  { title: "Make your board", body: "Upload 12 people from your life. Add a photo and first name for each one.", visual: <MiniBoard /> },
+  { title: "Make your board", body: "Upload 5 to 15 people from your life. Add a photo and first name for each one. More people means a harder, longer game.", visual: <MiniBoard /> },
   {
     title: "Choose someone secretly",
     body: "Pick one person from your board. The other player can see everyone you brought—but not who you chose.",
@@ -60,8 +60,8 @@ const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.R
     visual: <MiniBoard down={[1, 3, 6, 9]} />,
   },
   {
-    title: "Remove people and make your guess",
-    body: "Use each answer to eliminate people from the board. Guess when you think you know who remains.",
+    title: "Swipe people away and make your guess",
+    body: "Use each answer to clear the board: swipe left when it's not this person, swipe right if it still could be them. Guess when you think you know who remains.",
     visual: <MiniBoard down={[0, 1, 3, 4, 5, 6, 8, 9, 10, 11]} />,
   },
   {
@@ -133,10 +133,10 @@ export default function Home() {
       <section style={{ background: "linear-gradient(180deg,var(--ember) 0%,var(--ember-deep) 12%,var(--ember-deep) 88%,var(--ember) 100%)", padding: "100px 0" }}>
         <div className="wrap">
           <p className="eyebrow">Before you play</p>
-          <h2 className="display" style={{ marginBottom: 20 }}>Twelve people. One secret each.</h2>
+          <h2 className="display" style={{ marginBottom: 20 }}>Your people. One secret each.</h2>
           <dl className="specs" style={{ margin: "38px 0" }}>
             <div className="spec"><dt>Players</dt><dd>2</dd></div>
-            <div className="spec"><dt>Bring</dt><dd>12 photos each</dd></div>
+            <div className="spec"><dt>Bring</dt><dd>5–15 photos each</dd></div>
             <div className="spec"><dt>Setup</dt><dd>About 10 minutes the first time</dd></div>
             <div className="spec"><dt>Playing time</dt><dd>10–20 minutes per round</dd></div>
             <div className="spec"><dt>You&rsquo;ll need</dt><dd>One phone or laptop per player</dd></div>

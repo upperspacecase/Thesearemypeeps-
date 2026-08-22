@@ -49,7 +49,7 @@ export function SharePanel({ room, roomId }: { room: RoomApi; roomId: string }) 
           <span className="pill">
             <span className={`dot ${oppOnline ? "on" : ""}`} aria-hidden />
             {snap.opponent!.name} {oppOnline ? "is here" : "stepped away"} ·{" "}
-            {snap.opponent!.ready ? "deck ready" : `building their deck (${snap.opponent!.deckCount}/${snap.room.deckSize})`}
+            {snap.opponent!.ready ? "deck ready" : `building their deck (${snap.opponent!.deckCount} so far)`}
           </span>
         </p>
       ) : isHost ? (

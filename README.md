@@ -21,7 +21,7 @@ npm run typecheck                 # strict TypeScript
 npm run test:integration          # full two-player game over the API (server must be running)
 ```
 
-Useful environment variables: `IGC_SECRET` (cookie-signing secret — set in production), `DATABASE_URL` (Postgres connection string — switches storage from local SQLite to Postgres), `IGC_DATA_DIR` (SQLite location), `IGC_DECK_SIZE` (default 12; smaller decks for quick testing).
+Useful environment variables: `IGC_SECRET` (cookie-signing secret — set in production), `DATABASE_URL` (Postgres connection string — switches storage from local SQLite to Postgres), `IGC_DATA_DIR` (SQLite location), `IGC_DECK_MIN` / `IGC_DECK_MAX` (allowed deck size range, default 5–15).
 
 ## Deploy on Vercel
 

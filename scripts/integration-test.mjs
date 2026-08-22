@@ -86,8 +86,12 @@ const peek = await B.req(`/api/join?token=${inviteToken}`);
 ok(peek.status === 200 && peek.data.hostName === "Ada", "invite preview shows host name only");
 
 console.log("— decks");
-const size = (await A.snapshot(roomId)).data.room.deckSize;
-await A.uploadDeck(roomId, "A", size);
+const snap0 = (await A.snapshot(roomId)).data;
+const size = snap0.room.deckMin; // play with the minimum deck (5–15 allowed)
+await A.uploadDeck(roomId, "A", 1);
+const tooSmall = await A.action(roomId, { type: "mark_ready", consent: true });
+ok(tooSmall.status === 400, `deck below the minimum (${size}) cannot be marked ready`);
+await A.uploadDeck(roomId, "A", size - 1);
 const notEnough = await B.action(roomId, { type: "mark_ready", consent: true });
 ok(notEnough.status === 403 || notEnough.status === 401, "non-member cannot act on the room");
 

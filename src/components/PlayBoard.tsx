@@ -1,7 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { RoomApi } from "@/lib/useRoom";
+
+const SWIPE_THRESHOLD = 70; // px of horizontal drag that commits a swipe
+const LABEL_THRESHOLD = 28; // px before the swipe label appears
+
+interface Drag {
+  id: string;
+  startX: number;
+  startY: number;
+  dx: number;
+  moved: boolean;
+}
 
 export function PlayBoard({ room }: { room: RoomApi }) {
   const { snap, action, oppOnline } = room;
@@ -10,6 +21,9 @@ export function PlayBoard({ room }: { room: RoomApi }) {
   const [customQ, setCustomQ] = useState("");
   // Optimistic elimination overrides, reconciled against each snapshot (§10.2).
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const dragRef = useRef<Drag | null>(null);
+  dragRef.current = drag;
 
   const eliminated = useMemo(() => new Set(snap?.me.eliminatedCardIds ?? []), [snap]);
 
@@ -35,14 +49,31 @@ export function PlayBoard({ room }: { room: RoomApi }) {
   const isOut = (id: string) => overrides[id] ?? eliminated.has(id);
   const remaining = opp.board.filter((c) => !isOut(c.id)).length;
 
-  function toggle(cardId: string) {
-    if (guessMode) {
-      setGuessCard(cardId);
-      return;
-    }
-    const next = !isOut(cardId);
-    setOverrides((prev) => ({ ...prev, [cardId]: next }));
-    action({ type: "set_elimination", cardId, eliminated: next });
+  function setOut(cardId: string, out: boolean) {
+    if (isOut(cardId) === out) return;
+    setOverrides((prev) => ({ ...prev, [cardId]: out }));
+    action({ type: "set_elimination", cardId, eliminated: out });
+  }
+
+  function pointerDown(e: React.PointerEvent, id: string) {
+    if (guessMode) return;
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    setDrag({ id, startX: e.clientX, startY: e.clientY, dx: 0, moved: false });
+  }
+  function pointerMove(e: React.PointerEvent, id: string) {
+    setDrag((d) =>
+      d && d.id === id
+        ? { ...d, dx: e.clientX - d.startX, moved: d.moved || Math.abs(e.clientX - d.startX) > 6 }
+        : d
+    );
+  }
+  function pointerEnd(id: string) {
+    const d = dragRef.current;
+    setDrag(null);
+    if (!d || d.id !== id) return;
+    if (d.dx <= -SWIPE_THRESHOLD) setOut(id, true); // swipe left: it's not this person
+    else if (d.dx >= SWIPE_THRESHOLD) setOut(id, false); // swipe right: could still be them
+    else if (!d.moved) setOut(id, !isOut(id)); // plain tap toggles
   }
 
   async function ask(promptId?: string, text?: string) {
@@ -88,26 +119,49 @@ export function PlayBoard({ room }: { room: RoomApi }) {
               {opp.name}&rsquo;s people {guessMode && "— tap your guess"}
             </p>
             <div className="board-grid">
-              {opp.board.map((c) => (
-                <button
-                  key={c.id}
-                  className={`pcard ${isOut(c.id) && !guessMode ? "down" : ""} ${guessMode && guessCard === c.id ? "chosen" : ""}`}
-                  onClick={() => toggle(c.id)}
-                  aria-pressed={guessMode ? guessCard === c.id : isOut(c.id)}
-                  aria-label={
-                    guessMode
-                      ? `Guess ${c.name}`
-                      : `${c.name} — ${isOut(c.id) ? "eliminated, tap to restore" : "standing, tap to eliminate"}`
-                  }
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={c.imageUrl} alt={`Photo of ${c.name}`} />
-                  <span className="nm">{c.name}</span>
-                </button>
-              ))}
+              {opp.board.map((c) => {
+                const dragging = drag?.id === c.id;
+                const dx = dragging ? drag!.dx : 0;
+                const label = dragging && Math.abs(dx) > LABEL_THRESHOLD ? (dx < 0 ? "not-them" : "keep") : null;
+                return (
+                  <button
+                    key={c.id}
+                    className={`pcard ${isOut(c.id) && !guessMode ? "down" : ""} ${guessMode && guessCard === c.id ? "chosen" : ""} ${dragging ? "dragging" : ""}`}
+                    style={
+                      dragging && dx !== 0
+                        ? { transform: `translateX(${dx}px) rotate(${dx / 22}deg)`, opacity: 1 }
+                        : undefined
+                    }
+                    onPointerDown={(e) => pointerDown(e, c.id)}
+                    onPointerMove={(e) => pointerMove(e, c.id)}
+                    onPointerUp={() => pointerEnd(c.id)}
+                    onPointerCancel={() => setDrag(null)}
+                    onClick={(e) => {
+                      if (guessMode) setGuessCard(c.id);
+                      // keyboard activation only — mouse/touch taps resolve in pointerEnd
+                      else if (e.detail === 0) setOut(c.id, !isOut(c.id));
+                    }}
+                    aria-pressed={guessMode ? guessCard === c.id : isOut(c.id)}
+                    aria-label={
+                      guessMode
+                        ? `Guess ${c.name}`
+                        : isOut(c.id)
+                          ? `${c.name} — removed. Tap or swipe right to bring them back`
+                          : `${c.name} — still standing. Tap or swipe left to remove them`
+                    }
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.imageUrl} alt={`Photo of ${c.name}`} draggable={false} />
+                    <span className="nm">{c.name}</span>
+                    {label === "not-them" && <span className="swipe-label no" aria-hidden>It&rsquo;s not this person</span>}
+                    {label === "keep" && <span className="swipe-label yes" aria-hidden>Could still be them</span>}
+                  </button>
+                );
+              })}
             </div>
             <p className="small dim" style={{ marginTop: 12 }}>
-              Eliminations are private — {opp.name} never sees which cards you flip.
+              Swipe left — it&rsquo;s not this person. Swipe right to bring someone back. Tapping works too. Your board
+              is private: {opp.name} never sees who you remove.
             </p>
           </section>
 
@@ -231,7 +285,6 @@ export function PlayBoard({ room }: { room: RoomApi }) {
           </div>
         </div>
       )}
-
     </main>
   );
 }

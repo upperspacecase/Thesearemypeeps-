@@ -13,15 +13,17 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
   const [myName, setMyName] = useState<string | null>(null);
 
   if (!snap) return null;
-  const size = snap.room.deckSize;
+  const min = snap.room.deckMin;
+  const max = snap.room.deckMax;
   const cards = snap.me.cards;
-  const complete = cards.length === size;
+  const enough = cards.length >= min;
+  const full = cards.length >= max;
   const ready = snap.me.ready;
 
   async function upload(files: FileList | null) {
     if (!files || files.length === 0) return;
-    const room_remaining = size - (snap?.me.cards.length ?? 0);
-    const batch = [...files].slice(0, room_remaining);
+    const remaining = max - (snap?.me.cards.length ?? 0);
+    const batch = [...files].slice(0, remaining);
     setUploading(batch.length);
     for (const [i, file] of batch.entries()) {
       try {
@@ -54,11 +56,11 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
     <section className="panel fade-in">
       <p className="eyebrow">Your board</p>
       <h1 className="display" style={{ fontSize: "clamp(26px,4.5vw,36px)", marginBottom: 8 }}>
-        Bring {size} people from your life
+        Bring 5 to 15 people from your life
       </h1>
       <p className="dim small" style={{ maxWidth: "52ch", marginBottom: 20 }}>
-        A photo and a first name each. Different parts of your life make the best boards. Your opponent sees these only
-        once the round starts.
+        A photo and a first name each. Five gets you playing; more people make the guessing harder and the
+        conversation longer. Your opponent sees them only once the round starts.
       </p>
 
       <div style={{ marginBottom: 22, maxWidth: 360 }}>
@@ -74,12 +76,18 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         />
       </div>
 
-      <div className="progress-ticks" style={{ marginBottom: 20 }} aria-label={`${cards.length} of ${size} people added`}>
-        {Array.from({ length: size }, (_, i) => (
-          <i key={i} className={i < cards.length ? "on" : ""} />
+      <div
+        className="progress-ticks"
+        style={{ marginBottom: 20 }}
+        aria-label={`${cards.length} people added — at least ${min} needed, up to ${max}`}
+      >
+        {Array.from({ length: max }, (_, i) => (
+          <i key={i} className={`${i < cards.length ? "on" : ""} ${i === min - 1 ? "min" : ""}`} />
         ))}
         <em>
-          {cards.length}/{size}
+          {cards.length} {cards.length === 1 ? "person" : "people"}
+          {!enough && ` · ${min - cards.length} more to play`}
+          {enough && !full && !ready && ` · ready when you are`}
           {uploading > 0 && ` · uploading ${uploading}…`}
         </em>
       </div>
@@ -108,15 +116,14 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
             )}
           </figure>
         ))}
-        {!ready &&
-          Array.from({ length: size - cards.length }, (_, i) => (
-            <button key={`slot-${i}`} className="slot" onClick={() => fileInput.current?.click()} aria-label="Add a person">
-              +
-            </button>
-          ))}
+        {!ready && !full && (
+          <button className="slot" onClick={() => fileInput.current?.click()} aria-label="Add a person">
+            +
+          </button>
+        )}
       </div>
 
-      {!ready && !complete && (
+      {!ready && !full && (
         <div style={{ display: "grid", gap: 12, maxWidth: 460, marginBottom: 8 }}>
           <div>
             <label className="lbl" htmlFor="person-name">Next person&rsquo;s name (optional before choosing a photo)</label>
@@ -150,7 +157,7 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         </div>
       )}
 
-      {complete && !ready && (
+      {enough && !ready && (
         <div style={{ display: "grid", gap: 16, maxWidth: 520 }}>
           <label style={{ display: "flex", gap: 12, alignItems: "flex-start", cursor: "pointer" }}>
             <input
@@ -165,7 +172,7 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
             </span>
           </label>
           <button className="btn solid" onClick={() => action({ type: "mark_ready", consent })} disabled={!consent}>
-            My board is ready
+            My board is ready ({cards.length} people)
           </button>
         </div>
       )}

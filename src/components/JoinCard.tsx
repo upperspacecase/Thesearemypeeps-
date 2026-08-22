@@ -63,8 +63,8 @@ export function JoinCard({ token }: { token: string }) {
         your call or in the same room.
       </p>
       <p className="notice" style={{ margin: "18px 0 26px" }}>
-        You&rsquo;ll each upload 12 photos. Only the two of you can see them, and everything is deleted 24 hours after
-        the game — or sooner if you delete it yourself.
+        You&rsquo;ll each upload 5 to 15 photos of your people. Only the two of you can see them, and everything is
+        deleted 24 hours after the game — or sooner if you delete it yourself.
       </p>
 
       <label className="lbl" htmlFor="join-name">Your first name</label>

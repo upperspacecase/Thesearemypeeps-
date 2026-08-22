@@ -3,7 +3,8 @@ import {
   db,
   now,
   asInt,
-  DECK_SIZE,
+  DECK_MIN,
+  DECK_MAX,
   type Exec,
   type RoomRow,
   type RoomPlayerRow,
@@ -203,7 +204,7 @@ export async function addCard(
   if (!deck) throw new GameError("No deck for this room", 409);
   if (deck.status === "ready") throw new GameError("Un-ready your deck before editing it");
   const existing = await cardsOf(deck.id);
-  if (existing.length >= DECK_SIZE) throw new GameError(`A deck holds exactly ${DECK_SIZE} people`);
+  if (existing.length >= DECK_MAX) throw new GameError(`A deck holds at most ${DECK_MAX} people`);
   const name = card.name.trim().slice(0, 30);
   if (!name) throw new GameError("Every card needs a first name or nickname");
   const id = randomUUID();
@@ -282,7 +283,8 @@ export async function markReady(userId: string, roomId: string, consent: boolean
   const deck = await deckFor(roomId, userId);
   if (!deck) throw new GameError("No deck for this room", 409);
   const count = (await cardsOf(deck.id)).length;
-  if (count !== DECK_SIZE) throw new GameError(`Your deck needs exactly ${DECK_SIZE} people (you have ${count})`);
+  if (count < DECK_MIN || count > DECK_MAX)
+    throw new GameError(`Bring between ${DECK_MIN} and ${DECK_MAX} people (you have ${count})`);
   if (!consent) throw new GameError("Please confirm you have permission to share these photos");
 
   await db().tx(async (x) => {

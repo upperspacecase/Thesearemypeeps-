@@ -304,7 +304,9 @@ export function db(): Db {
 
 export const now = () => new Date().toISOString();
 
-export const DECK_SIZE = Math.max(2, parseInt(process.env.IGC_DECK_SIZE ?? "12", 10) || 12);
+// Deck size is a range: bring at least DECK_MIN people, at most DECK_MAX.
+export const DECK_MIN = Math.max(2, parseInt(process.env.IGC_DECK_MIN ?? "5", 10) || 5);
+export const DECK_MAX = Math.max(DECK_MIN, parseInt(process.env.IGC_DECK_MAX ?? "15", 10) || 15);
 
 // Postgres returns COUNT(*) as a string; normalize wherever we count.
 export const asInt = (v: unknown): number => (typeof v === "string" ? parseInt(v, 10) : (v as number)) || 0;
