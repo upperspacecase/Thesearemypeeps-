@@ -106,7 +106,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
             <span className="pill" title="Your secret — only you can see this">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={secretCard.imageUrl} alt="" width={22} height={28} style={{ borderRadius: 4, objectFit: "cover" }} />
-              your secret: {secretCard.name}
+              <span className="trunc">your secret: {secretCard.name}</span>
             </span>
           )}
           <span className="pill" aria-label={`${remaining} people still standing`}>{remaining} left</span>

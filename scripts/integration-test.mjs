@@ -62,14 +62,15 @@ class Client {
   async snapshot(roomId) {
     return this.req(`/api/rooms/${roomId}/snapshot`);
   }
+  async uploadOne(roomId, name) {
+    const form = new FormData();
+    form.append("file", new Blob([TINY_JPEG], { type: "image/jpeg" }), "card.jpg");
+    form.append("name", name);
+    const res = await this.req(`/api/rooms/${roomId}/cards`, { form });
+    if (res.status !== 200) throw new Error(`upload failed: ${res.status} ${JSON.stringify(res.data)}`);
+  }
   async uploadDeck(roomId, prefix, n) {
-    for (let i = 0; i < n; i++) {
-      const form = new FormData();
-      form.append("file", new Blob([TINY_JPEG], { type: "image/jpeg" }), "card.jpg");
-      form.append("name", `${prefix}${i + 1}`);
-      const res = await this.req(`/api/rooms/${roomId}/cards`, { form });
-      if (res.status !== 200) throw new Error(`upload failed: ${res.status} ${JSON.stringify(res.data)}`);
-    }
+    for (let i = 0; i < n; i++) await this.uploadOne(roomId, `${prefix}${i + 1}`);
   }
 }
 
@@ -91,7 +92,8 @@ const size = snap0.room.deckMin; // play with the minimum deck (5–15 allowed)
 await A.uploadDeck(roomId, "A", 1);
 const tooSmall = await A.action(roomId, { type: "mark_ready", consent: true });
 ok(tooSmall.status === 400, `deck below the minimum (${size}) cannot be marked ready`);
-await A.uploadDeck(roomId, "A", size - 1);
+await A.uploadDeck(roomId, "A", size - 2);
+await A.uploadOne(roomId, ""); // photos upload unnamed; the name box under the card fills them in
 const notEnough = await B.action(roomId, { type: "mark_ready", consent: true });
 ok(notEnough.status === 403 || notEnough.status === 401, "non-member cannot act on the room");
 
@@ -113,6 +115,10 @@ ok(strangerImg.status === 401 || strangerImg.status === 403, "stranger cannot fe
 
 const badConsent = await A.action(roomId, { type: "mark_ready", consent: false });
 ok(badConsent.status === 400, "readiness requires the consent confirmation");
+const unnamedReady = await A.action(roomId, { type: "mark_ready", consent: true });
+ok(unnamedReady.status === 400 && /name/i.test(unnamedReady.data.error), "every photo must be named before the deck is ready");
+const blankCard = (await A.snapshot(roomId)).data.me.cards.find((c) => !c.name.trim());
+await A.action(roomId, { type: "rename_card", cardId: blankCard.id, name: `A${size}` });
 await A.action(roomId, { type: "mark_ready", consent: true });
 await B.action(roomId, { type: "mark_ready", consent: true });
 let snapA = (await A.snapshot(roomId)).data;

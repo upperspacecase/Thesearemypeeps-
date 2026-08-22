@@ -15,7 +15,7 @@
   --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -88,13 +88,14 @@ h2.display { font-weight: 400; font-size: clamp(26px, 4vw, 38px); line-height: 1
 label.lbl { display: block; font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blush); margin-bottom: 8px; }
 
 /* person cards / board */
-.board-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-@media (max-width: 560px) { .board-grid { grid-template-columns: repeat(3, 1fr); } }
+.board-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .board-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .pcard {
   position: relative; border-radius: 14px; background: var(--cream); padding: 7px 7px 6px;
   box-shadow: 0 10px 24px -14px rgba(70, 20, 2, 0.55);
   transition: transform 0.2s ease, opacity 0.2s ease;
   text-align: center; width: 100%; display: block;
+  min-width: 0; max-width: 100%;
 }
 .pcard img {
   display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 9px;
@@ -164,8 +165,8 @@ button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none
 .chip:focus-visible { outline: 3px solid var(--cream); outline-offset: 2px; }
 
 /* deck builder */
-.deck-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-@media (max-width: 640px) { .deck-grid { grid-template-columns: repeat(3, 1fr); } }
+.deck-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .deck-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .slot {
   border: 1.5px dashed var(--glass-edge); border-radius: 14px; aspect-ratio: 3 / 4.4;
   display: grid; place-items: center; color: var(--cream-dim); font-size: 26px;
@@ -230,3 +231,20 @@ button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none
 @media (max-width: 760px) { .step-row, .step-row:nth-child(even) { grid-template-columns: 1fr; direction: ltr; } }
 .play-cols { display: grid; gap: 32px; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
 @media (max-width: 860px) { .play-cols { grid-template-columns: 1fr; } }
+
+/* name box under each photo in the deck builder */
+.pcard .nm-input {
+  width: 100%; margin-top: 5px; padding: 6px 8px;
+  font-size: 16px; /* 16px+ stops iOS from zooming on focus */
+  text-align: center; color: var(--ink); background: rgba(60, 14, 0, 0.08);
+  border: 1px solid rgba(60, 14, 0, 0.25); border-radius: 9px; min-width: 0;
+}
+.pcard .nm-input::placeholder { color: rgba(60, 14, 0, 0.45); }
+.pcard .nm-input:focus-visible { outline: 2px solid var(--ember); outline-offset: 1px; }
+.pcard .nm-input.missing { border-color: var(--ember); background: rgba(225, 73, 15, 0.12); }
+
+/* long names must never stretch a pill or a card */
+.pill { max-width: 100%; }
+.pill .trunc {
+  max-width: 10em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

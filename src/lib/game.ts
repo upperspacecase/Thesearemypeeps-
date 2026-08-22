@@ -214,8 +214,9 @@ export async function addCard(
   if (deck.status === "ready") throw new GameError("Un-ready your deck before editing it");
   const existing = await cardsOf(deck.id);
   if (existing.length >= DECK_MAX) throw new GameError(`A deck holds at most ${DECK_MAX} people`);
+  // Names are typed under each photo after upload; empty is fine for now
+  // and blocked at mark_ready instead.
   const name = card.name.trim().slice(0, 30);
-  if (!name) throw new GameError("Every card needs a first name or nickname");
   const id = randomUUID();
   await db().tx(async (x) => {
     await x.run(
@@ -286,9 +287,13 @@ export async function markReady(userId: string, roomId: string, consent: boolean
     throw new GameError("The round has already started");
   const deck = await deckFor(roomId, userId);
   if (!deck) throw new GameError("No deck for this room", 409);
-  const count = (await cardsOf(deck.id)).length;
+  const deckCards = await cardsOf(deck.id);
+  const count = deckCards.length;
   if (count < DECK_MIN || count > DECK_MAX)
     throw new GameError(`Bring between ${DECK_MIN} and ${DECK_MAX} people (you have ${count})`);
+  const unnamed = deckCards.filter((c) => !c.display_name.trim()).length;
+  if (unnamed > 0)
+    throw new GameError(unnamed === 1 ? "One photo still needs a name" : `${unnamed} photos still need names`);
   if (!consent) throw new GameError("Please confirm you have permission to share these photos");
 
   await db().tx(async (x) => {

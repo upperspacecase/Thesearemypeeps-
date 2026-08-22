@@ -4,10 +4,39 @@ import { useRef, useState } from "react";
 import type { RoomApi } from "@/lib/useRoom";
 import { toCardImage } from "@/lib/client";
 
+/** Name box under one photo: local while typing, saved on blur or Enter. */
+function NameInput({
+  cardId,
+  name,
+  onSave,
+}: {
+  cardId: string;
+  name: string;
+  onSave: (cardId: string, name: string) => void;
+}) {
+  const [value, setValue] = useState(name);
+  const save = () => {
+    if (value.trim() && value.trim() !== name) onSave(cardId, value.trim());
+  };
+  return (
+    <input
+      className={`nm-input ${value.trim() ? "" : "missing"}`}
+      placeholder="Name"
+      aria-label="This person's first name"
+      value={value}
+      maxLength={30}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+    />
+  );
+}
+
 export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string }) {
   const { snap, action, refresh, setError } = room;
   const fileInput = useRef<HTMLInputElement>(null);
-  const [pendingName, setPendingName] = useState("");
   const [uploading, setUploading] = useState(0);
   const [consent, setConsent] = useState(false);
   const [myName, setMyName] = useState<string | null>(null);
@@ -19,6 +48,7 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
   const enough = cards.length >= min;
   const full = cards.length >= max;
   const ready = snap.me.ready;
+  const unnamed = cards.filter((c) => !c.name.trim()).length;
 
   async function upload(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -30,9 +60,8 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         const blob = await toCardImage(file);
         const form = new FormData();
         form.append("file", blob, "card.jpg");
-        const base = pendingName.trim();
-        const fallback = file.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 30) || "Someone";
-        form.append("name", batch.length === 1 && base ? base : fallback);
+        // No name yet — each photo gets its own name box below it.
+        form.append("name", "");
         const res = await fetch(`/api/rooms/${roomId}/cards`, { method: "POST", body: form });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -43,7 +72,6 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
       }
       setUploading(batch.length - i - 1);
     }
-    setPendingName("");
     setUploading(0);
     await refresh();
   }
@@ -52,6 +80,8 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
     if (myName !== null && myName.trim()) await action({ type: "set_display_name", name: myName });
   }
 
+  const saveCardName = (cardId: string, name: string) => action({ type: "rename_card", cardId, name });
+
   return (
     <section className="panel fade-in">
       <p className="eyebrow">Your board</p>
@@ -59,8 +89,8 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         Bring 5 to 15 people from your life
       </h1>
       <p className="dim small" style={{ maxWidth: "52ch", marginBottom: 20 }}>
-        A photo and a first name each. Five gets you playing; more people make the guessing harder and the
-        conversation longer. Your opponent sees them only once the round starts.
+        Add photos, then type each person&rsquo;s first name under their picture. Five gets you playing; more people
+        make the guessing harder. Your opponent sees them only once the round starts.
       </p>
 
       <div style={{ marginBottom: 22, maxWidth: 360 }}>
@@ -87,7 +117,8 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         <em>
           {cards.length} {cards.length === 1 ? "person" : "people"}
           {!enough && ` · ${min - cards.length} more to play`}
-          {enough && !full && !ready && ` · ready when you are`}
+          {enough && unnamed > 0 && ` · ${unnamed} still ${unnamed === 1 ? "needs" : "need"} a name`}
+          {enough && unnamed === 0 && !ready && ` · ready when you are`}
           {uploading > 0 && ` · uploading ${uploading}…`}
         </em>
       </div>
@@ -96,22 +127,17 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         {cards.map((c, i) => (
           <figure key={c.id} className="pcard">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={c.imageUrl} alt={`Photo of ${c.name}`} />
-            <figcaption className="nm">{c.name}</figcaption>
+            <img src={c.imageUrl} alt={c.name ? `Photo of ${c.name}` : "Photo awaiting a name"} />
+            {ready ? (
+              <figcaption className="nm">{c.name}</figcaption>
+            ) : (
+              <NameInput cardId={c.id} name={c.name} onSave={saveCardName} />
+            )}
             {!ready && (
               <div className="deck-tools">
-                <button aria-label={`Move ${c.name} earlier`} disabled={i === 0} onClick={() => action({ type: "move_card", cardId: c.id, direction: "up" })}>←</button>
-                <button
-                  aria-label={`Rename ${c.name}`}
-                  onClick={() => {
-                    const name = prompt("First name or nickname", c.name);
-                    if (name) action({ type: "rename_card", cardId: c.id, name });
-                  }}
-                >
-                  ✎
-                </button>
-                <button aria-label={`Remove ${c.name}`} onClick={() => action({ type: "remove_card", cardId: c.id })}>✕</button>
-                <button aria-label={`Move ${c.name} later`} disabled={i === cards.length - 1} onClick={() => action({ type: "move_card", cardId: c.id, direction: "down" })}>→</button>
+                <button aria-label="Move this person earlier" disabled={i === 0} onClick={() => action({ type: "move_card", cardId: c.id, direction: "up" })}>←</button>
+                <button aria-label="Remove this person" onClick={() => action({ type: "remove_card", cardId: c.id })}>✕</button>
+                <button aria-label="Move this person later" disabled={i === cards.length - 1} onClick={() => action({ type: "move_card", cardId: c.id, direction: "down" })}>→</button>
               </div>
             )}
           </figure>
@@ -125,17 +151,6 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
 
       {!ready && !full && (
         <div style={{ display: "grid", gap: 12, maxWidth: 460, marginBottom: 8 }}>
-          <div>
-            <label className="lbl" htmlFor="person-name">Next person&rsquo;s name (optional before choosing a photo)</label>
-            <input
-              id="person-name"
-              className="field"
-              placeholder="e.g. Maya"
-              value={pendingName}
-              maxLength={30}
-              onChange={(e) => setPendingName(e.target.value)}
-            />
-          </div>
           <button className="btn ghost" onClick={() => fileInput.current?.click()} disabled={uploading > 0}>
             {uploading > 0 ? "Uploading…" : "Add photos"}
           </button>
@@ -171,8 +186,14 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
               of us will see them, and they&rsquo;re deleted 24 hours after the game — or sooner if I delete them.
             </span>
           </label>
-          <button className="btn solid" onClick={() => action({ type: "mark_ready", consent })} disabled={!consent}>
-            My board is ready ({cards.length} people)
+          <button
+            className="btn solid"
+            onClick={() => action({ type: "mark_ready", consent })}
+            disabled={!consent || unnamed > 0}
+          >
+            {unnamed > 0
+              ? `Name ${unnamed === 1 ? "the last person" : `${unnamed} more people`} to continue`
+              : `My board is ready (${cards.length} people)`}
           </button>
         </div>
       )}
