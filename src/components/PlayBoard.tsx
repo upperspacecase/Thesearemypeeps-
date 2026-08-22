@@ -21,7 +21,7 @@ interface Drag {
 }
 
 export function PlayBoard({ room }: { room: RoomApi }) {
-  const { snap, action, oppOnline } = room;
+  const { snap, action } = room;
   // Optimistic elimination overrides, reconciled against each snapshot.
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -77,7 +77,6 @@ export function PlayBoard({ room }: { room: RoomApi }) {
 
   if (!snap || !snap.round || !snap.opponent) return null;
   const board = snap.board;
-  const opp = snap.opponent;
   const secretCard = board.find((c) => c.id === snap.me.secretCardId);
   const zoomCard = board.find((c) => c.id === zoomId);
   const isOut = (id: string) => overrides[id] ?? eliminated.has(id);
@@ -120,19 +119,6 @@ export function PlayBoard({ room }: { room: RoomApi }) {
 
   return (
     <main className="playwrap">
-      <div className="turnbar" style={{ position: "static" }}>
-        <div className="wrap turnbar-inner" style={{ gap: 10 }}>
-          <span className="pill" style={{ letterSpacing: "0.14em", textTransform: "uppercase", fontSize: 11 }}>
-            Round {snap.round.number}
-          </span>
-          <span className="pill">
-            <span className={`dot ${oppOnline ? "on" : ""}`} aria-hidden />
-            <span className="trunc">{opp.name}</span>
-          </span>
-          <span className="pill" aria-label={`${remaining} people still standing`}>{remaining} left</span>
-        </div>
-      </div>
-
       <div className="board-fit" ref={boardRef}>
         <div
           className="fitgrid"
@@ -168,8 +154,9 @@ export function PlayBoard({ room }: { room: RoomApi }) {
 
       <footer className="playfoot">
         <p className="mech">
-          Ask each other questions out loud — nothing goes through the app. Swipe a card left when it&rsquo;s not them.
-          Tap anyone to look closer, guess from there when you&rsquo;re sure.
+          <strong style={{ color: "var(--cream)", fontWeight: 600 }}>{remaining} still standing.</strong> Ask questions
+          out loud — nothing goes through the app. Swipe a card left when it&rsquo;s not them. Tap anyone to look
+          closer, guess from there when you&rsquo;re sure.
         </p>
         {secretCard && (
           <button className="secret-corner" onClick={() => openZoom(secretCard.id)} aria-label={`Your pick: ${secretCard.name}. Tap to enlarge`}>
