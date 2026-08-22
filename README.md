@@ -34,6 +34,12 @@ The app auto-detects its storage: with no configuration it uses a local SQLite f
 
 On serverless, realtime falls back from SSE to short polling (a few seconds of latency — fine for a turn-based game), and presence comes from last-seen stamps in the database, so nothing depends on server memory.
 
+### Troubleshooting a deployment
+
+Visit **`/api/health`** on the deployed site. It reports which storage driver was selected, whether the database answers a query, whether `DATABASE_URL` and `IGC_SECRET` are present, and a `todo` list of anything missing — without printing any secret values. If starting a game fails, the error shown in the UI now names the cause rather than saying "something went wrong".
+
+`better-sqlite3` (local development only) is an optional dependency, so a host that cannot compile native modules still deploys successfully and runs on Postgres.
+
 ## How it's built
 
 - **Next.js App Router + TypeScript.** Server components for shells, client components for the live board. No Supabase — no third-party auth, database, or storage service.

@@ -17,7 +17,18 @@ export interface Db extends Exec {
   tx<T>(fn: (t: Exec) => Promise<T>): Promise<T>;
 }
 
-const PG_URL = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
+// Vercel's Postgres integrations set several of these depending on provider.
+const PG_URL =
+  process.env.DATABASE_URL ??
+  process.env.POSTGRES_URL ??
+  process.env.POSTGRES_PRISMA_URL ??
+  process.env.DATABASE_POSTGRES_URL ??
+  process.env.POSTGRES_URL_NON_POOLING;
+
+/** A misconfigured deployment, not a bug — surfaced verbatim to the operator. */
+export class ConfigError extends Error {}
+
+export const storageDriver = (): "postgres" | "sqlite" => (PG_URL ? "postgres" : "sqlite");
 
 function ddl(dialect: "sqlite" | "pg"): string {
   const AUTOID =
@@ -173,9 +184,23 @@ function ddl(dialect: "sqlite" | "pg"): string {
 // ------------------------------------------------------------- SQLite driver
 
 function makeSqlite(): Db {
+  // Serverless hosts have no writable, persistent disk. Rather than fail with
+  // a mystery error on the first write, say exactly what is missing.
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    throw new ConfigError(
+      "This deployment has no database connected yet. Add a Postgres database (Vercel → Storage → Neon) so DATABASE_URL is set, then redeploy."
+    );
+  }
   // Lazy require keeps the native module out of serverless bundles.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require("better-sqlite3") as typeof import("better-sqlite3");
+  let Database: typeof import("better-sqlite3");
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    Database = require("better-sqlite3") as typeof import("better-sqlite3");
+  } catch {
+    throw new ConfigError(
+      "No database available: set DATABASE_URL to a Postgres connection string, or install better-sqlite3 for local development."
+    );
+  }
   const dataDir = process.env.IGC_DATA_DIR ?? path.join(process.cwd(), "data");
   fs.mkdirSync(dataDir, { recursive: true });
   const sq = new Database(path.join(dataDir, "igc.sqlite"));
