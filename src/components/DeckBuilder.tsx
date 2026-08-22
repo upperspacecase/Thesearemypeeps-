@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { RoomApi } from "@/lib/useRoom";
 import { toCardImage } from "@/lib/client";
+import { CropModal } from "./CropModal";
 
 /** Name box under one photo: local while typing, saved on blur or Enter. */
 function NameInput({
@@ -38,6 +39,8 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
   const { snap, action, refresh, setError } = room;
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
+  const [queue, setQueue] = useState<File[]>([]);
+  const [queueTotal, setQueueTotal] = useState(0);
   const [consent, setConsent] = useState(false);
   const [myName, setMyName] = useState<string | null>(null);
 
@@ -50,27 +53,64 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
   const ready = snap.me.ready;
   const unnamed = cards.filter((c) => !c.name.trim()).length;
 
-  async function upload(files: FileList | null) {
+  function upload(files: FileList | null) {
     if (!files || files.length === 0) return;
     const remaining = max - (snap?.me.cards.length ?? 0);
     const batch = [...files].slice(0, remaining);
-    setUploading(batch.length);
-    for (const [i, file] of batch.entries()) {
+    // Each photo goes through the framing step (drag / pinch-zoom) first.
+    setQueue(batch);
+    setQueueTotal(batch.length);
+  }
+
+  async function uploadBlob(blob: Blob) {
+    try {
+      const form = new FormData();
+      form.append("file", blob, "card.jpg");
+      // No name yet — each photo gets its own name box below it.
+      form.append("name", "");
+      const res = await fetch(`/api/rooms/${roomId}/cards`, { method: "POST", body: form });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "Upload failed");
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function croppedDone(blob: Blob) {
+    setUploading(1);
+    await uploadBlob(blob);
+    setUploading(0);
+    setQueue((q) => q.slice(1));
+    await refresh();
+  }
+
+  async function currentAsIs() {
+    const file = queue[0];
+    if (!file) return;
+    setUploading(1);
+    try {
+      await uploadBlob(await toCardImage(file));
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setUploading(0);
+    setQueue((q) => q.slice(1));
+    await refresh();
+  }
+
+  async function restAsIs() {
+    const rest = [...queue];
+    setQueue([]);
+    setUploading(rest.length);
+    for (const [i, file] of rest.entries()) {
       try {
-        const blob = await toCardImage(file);
-        const form = new FormData();
-        form.append("file", blob, "card.jpg");
-        // No name yet — each photo gets its own name box below it.
-        form.append("name", "");
-        const res = await fetch(`/api/rooms/${roomId}/cards`, { method: "POST", body: form });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error((data as { error?: string }).error ?? "Upload failed");
-        }
+        await uploadBlob(await toCardImage(file));
       } catch (err) {
         setError((err as Error).message);
       }
-      setUploading(batch.length - i - 1);
+      setUploading(rest.length - i - 1);
     }
     setUploading(0);
     await refresh();
@@ -202,6 +242,18 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         <p className="pill hot" role="status">
           Your deck is ready — waiting for {snap.opponent ? snap.opponent.name : "your opponent"}
         </p>
+      )}
+
+      {queue.length > 0 && (
+        <CropModal
+          file={queue[0]}
+          index={queueTotal - queue.length}
+          total={queueTotal}
+          onDone={croppedDone}
+          onUseAsIs={currentAsIs}
+          onRestAsIs={restAsIs}
+          onSkip={() => setQueue((q) => q.slice(1))}
+        />
       )}
     </section>
   );

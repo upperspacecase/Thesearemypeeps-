@@ -320,3 +320,11 @@ button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none
 }
 .zoom-card .btn.ghost { border-color: rgba(60, 14, 0, 0.3); color: var(--ink); background: rgba(60, 14, 0, 0.05); }
 .zoom-card .btn.ghost:hover:not(:disabled) { background: rgba(60, 14, 0, 0.12); }
+
+/* ---------- upload crop stage ---------- */
+.crop-stage { margin: 0 auto; overflow: hidden; border-radius: 14px; background: var(--blush); }
+.crop-frame {
+  position: relative; overflow: hidden; transform-origin: 0 0;
+  touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
+}
+.crop-frame:active { cursor: grabbing; }
