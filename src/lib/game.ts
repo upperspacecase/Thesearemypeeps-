@@ -11,11 +11,9 @@ import {
   type DeckRow,
   type PersonCardRow,
   type RoundRow,
-  type QuestionRow,
 } from "./db";
 import { hashToken, newInviteToken } from "./tokens";
 import { publish } from "./bus";
-import { promptById } from "./prompts";
 import { track } from "./analytics";
 
 // Every gameplay mutation lives here, runs inside a transaction, validates
@@ -385,15 +383,9 @@ export async function selectSecret(userId: string, roomId: string, cardId: strin
 
   let started = false;
   if (secretCount === 2) {
-    // First turn: seat 1 for round 1, alternating on rematches (PRD FR-21).
-    const seats = await players(roomId);
-    const first = seats[(round.number - 1) % seats.length].user_id;
+    // No turns: questions happen out loud, off-app. The app is the board.
     await db().tx(async (x) => {
-      await x.run("UPDATE rounds SET status = 'active', active_player_id = ?, started_at = ? WHERE id = ?", [
-        first,
-        now(),
-        round.id,
-      ]);
+      await x.run("UPDATE rounds SET status = 'active', started_at = ? WHERE id = ?", [now(), round.id]);
       await x.run("UPDATE rooms SET status = 'active', updated_at = ? WHERE id = ?", [now(), roomId]);
     });
     started = true;
@@ -407,74 +399,6 @@ async function activeRound(roomId: string): Promise<RoundRow> {
   const round = await currentRound(roomId);
   if (!round || round.status !== "active") throw new GameError("The round is not active", 409);
   return round;
-}
-
-async function openQuestion(roundId: string): Promise<QuestionRow | undefined> {
-  return db().get<QuestionRow>("SELECT * FROM questions WHERE round_id = ? AND status = 'open'", [roundId]);
-}
-
-export async function turnCount(roundId: string): Promise<number> {
-  const row = await db().get<{ n: unknown }>("SELECT CAST(COUNT(*) AS INT) AS n FROM questions WHERE round_id = ?", [
-    roundId,
-  ]);
-  return asInt(row?.n);
-}
-
-export async function askQuestion(userId: string, roomId: string, text: string, promptId?: string) {
-  const room = await getRoom(roomId);
-  await getMembership(roomId, userId);
-  const round = await activeRound(roomId);
-  if (round.active_player_id !== userId) throw new GameError("It is not your turn", 409);
-  if (await openQuestion(round.id)) throw new GameError("Wait for the answer to your open question", 409);
-
-  let finalText = text.trim().slice(0, 200);
-  if (promptId) {
-    const p = promptById(promptId);
-    if (!p) throw new GameError("Unknown prompt");
-    if (room.prompt_policy === "team_safe" && !p.teamSafe)
-      throw new GameError("That prompt is not in the team-safe pack");
-    finalText = p.text;
-  } else {
-    if (room.prompt_policy === "team_safe")
-      throw new GameError("Custom questions are off in team-safe rooms — pick a suggested prompt");
-    if (!finalText) throw new GameError("Ask a yes-or-no question");
-  }
-
-  const turnNo = (await turnCount(round.id)) + 1;
-  await db().run(
-    "INSERT INTO questions (id, round_id, turn_no, asker_id, text, prompt_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'open', ?)",
-    [randomUUID(), round.id, turnNo, userId, finalText, promptId ?? null, now()]
-  );
-  await bumpExpiry(roomId);
-  track("question_asked", { roomId, turnNo, promptId });
-  publish(roomId, { type: "question.asked", turnNo });
-}
-
-export async function answerQuestion(userId: string, roomId: string, questionId: string, answer: string) {
-  await getRoom(roomId);
-  await getMembership(roomId, userId);
-  const round = await activeRound(roomId);
-  const q = await openQuestion(round.id);
-  if (!q || q.id !== questionId) throw new GameError("That question is not open", 409);
-  if (q.asker_id === userId) throw new GameError("The other player answers your question", 403);
-  if (!["yes", "no", "not_sure", "skip"].includes(answer))
-    throw new GameError("Answer must be yes, no, not sure, or skip");
-
-  await db().tx(async (x) => {
-    await x.run("INSERT INTO answers (question_id, responder_id, answer, answered_at) VALUES (?, ?, ?, ?)", [
-      q.id,
-      userId,
-      answer,
-      now(),
-    ]);
-    await x.run("UPDATE questions SET status = 'answered' WHERE id = ?", [q.id]);
-    // Turn passes to the responder once they answer (PRD §5.2).
-    await x.run("UPDATE rounds SET active_player_id = ? WHERE id = ?", [userId, round.id]);
-  });
-  await bumpExpiry(roomId);
-  track("answer_submitted", { roomId, turnNo: q.turn_no });
-  publish(roomId, { type: "question.answered", turnNo: q.turn_no });
-  publish(roomId, { type: "turn.changed" });
 }
 
 export async function setElimination(userId: string, roomId: string, cardId: string, eliminated: boolean) {
@@ -498,10 +422,9 @@ export async function setElimination(userId: string, roomId: string, cardId: str
 export async function submitGuess(userId: string, roomId: string, cardId: string) {
   await getRoom(roomId);
   await getMembership(roomId, userId);
+  // Either player may guess at any moment — the conversation lives off-app,
+  // so the app never gates it. A wrong guess still loses the round.
   const round = await activeRound(roomId);
-  if (round.active_player_id !== userId) throw new GameError("You can only guess at the start of your turn", 409);
-  if (await openQuestion(round.id)) throw new GameError("Wait for the answer to your open question", 409);
-
   const opp = await opponentOf(roomId, userId);
   if (!opp) throw new GameError("No opponent yet", 409);
   if (!(await cardInRoom(roomId, cardId))) throw new GameError("Guess a person from this board", 403);
@@ -520,7 +443,7 @@ export async function submitGuess(userId: string, roomId: string, cardId: string
       [randomUUID(), round.id, userId, cardId, correct ? 1 : 0, now()]
     );
     await x.run(
-      "UPDATE rounds SET status = 'completed', winner_id = ?, ended_at = ?, active_player_id = NULL WHERE id = ?",
+      "UPDATE rounds SET status = 'completed', winner_id = ?, ended_at = ? WHERE id = ?",
       [winner, now(), round.id]
     );
     await x.run("UPDATE rooms SET status = 'completed', updated_at = ? WHERE id = ?", [now(), roomId]);

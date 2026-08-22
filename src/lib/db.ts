@@ -115,24 +115,6 @@ function ddl(dialect: "sqlite" | "pg"): string {
     PRIMARY KEY (round_id, owner_id)
   );
 
-  CREATE TABLE IF NOT EXISTS questions (
-    id TEXT PRIMARY KEY,
-    round_id TEXT NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
-    turn_no INTEGER NOT NULL,
-    asker_id TEXT NOT NULL REFERENCES profiles(id),
-    text TEXT NOT NULL,
-    prompt_id TEXT,
-    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','answered')),
-    created_at TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS answers (
-    question_id TEXT PRIMARY KEY REFERENCES questions(id) ON DELETE CASCADE,
-    responder_id TEXT NOT NULL REFERENCES profiles(id),
-    answer TEXT NOT NULL CHECK (answer IN ('yes','no','not_sure','skip')),
-    answered_at TEXT NOT NULL
-  );
-
   CREATE TABLE IF NOT EXISTS eliminations (
     round_id TEXT NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
     player_id TEXT NOT NULL REFERENCES profiles(id),
@@ -175,7 +157,6 @@ function ddl(dialect: "sqlite" | "pg"): string {
   );
 
   CREATE INDEX IF NOT EXISTS idx_rounds_room ON rounds(room_id, number);
-  CREATE INDEX IF NOT EXISTS idx_questions_round ON questions(round_id, turn_no);
   CREATE INDEX IF NOT EXISTS idx_cards_deck ON person_cards(deck_id, sort_order);
   CREATE INDEX IF NOT EXISTS idx_rooms_expiry ON rooms(expires_at);
   `;
@@ -389,20 +370,4 @@ export interface RoundRow {
   status: "secret_selection" | "active" | "completed";
   active_player_id: string | null;
   winner_id: string | null;
-}
-export interface QuestionRow {
-  id: string;
-  round_id: string;
-  turn_no: number;
-  asker_id: string;
-  text: string;
-  prompt_id: string | null;
-  status: "open" | "answered";
-  created_at: string;
-}
-export interface AnswerRow {
-  question_id: string;
-  responder_id: string;
-  answer: "yes" | "no" | "not_sure" | "skip";
-  answered_at: string;
 }

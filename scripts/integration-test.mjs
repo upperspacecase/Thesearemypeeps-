@@ -157,65 +157,34 @@ const jsonB = JSON.stringify(snapB);
 ok(count(jsonB, aSecret) === count(jsonB, sameDeckControl(snapB, aSecret)), "nothing in B's payload singles out A's secret card");
 ok(snapB.board.length === size * 2, "everyone's people are on the play board");
 
-console.log("— turns");
-const active = snapA.round.activePlayerId;
-const inactive = active === snapA.me.id ? B : A;
-const activeC = active === snapA.me.id ? A : B;
-const outOfTurn = await inactive.action(roomId, { type: "ask_question", text: "Out of turn?" });
-ok(outOfTurn.status === 409, "out-of-turn question rejected");
-
-const q1 = await activeC.action(roomId, { type: "ask_question", text: "Are they wearing a hat?" });
-ok(q1.status === 200, "active player asks a custom question");
-const dupQ = await activeC.action(roomId, { type: "ask_question", text: "Second question?" });
-ok(dupQ.status === 409, "second open question rejected");
-
-let respSnap = (await inactive.snapshot(roomId)).data;
-const openQ = respSnap.round.questions.find((q) => q.status === "open");
-const selfAnswer = await activeC.action(roomId, { type: "answer_question", questionId: openQ.id, answer: "yes" });
-ok(selfAnswer.status === 403, "asker cannot answer their own question");
-const ans = await inactive.action(roomId, { type: "answer_question", questionId: openQ.id, answer: "not_sure" });
-ok(ans.status === 200, "responder answers (not sure)");
-respSnap = (await inactive.snapshot(roomId)).data;
-ok(respSnap.round.myTurn === true, "turn passes to the responder after answering");
-
-console.log("— eliminations");
-const elimSnap = (await activeC.snapshot(roomId)).data;
+console.log("— no turns: the conversation lives off-app");
+// Nothing gates play — either player acts whenever. Eliminations first:
+const elimSnap = (await A.snapshot(roomId)).data;
 const targetCard = elimSnap.board.find((c) => !c.mine).id;
-await activeC.action(roomId, { type: "set_elimination", cardId: targetCard, eliminated: true });
-snapA = (await activeC.snapshot(roomId)).data;
+await A.action(roomId, { type: "set_elimination", cardId: targetCard, eliminated: true });
+snapA = (await A.snapshot(roomId)).data;
 ok(snapA.me.eliminatedCardIds.includes(targetCard), "elimination persists for the actor");
-const otherView = (await inactive.snapshot(roomId)).data;
+const otherView = (await B.snapshot(roomId)).data;
 ok(!JSON.stringify(otherView.me.eliminatedCardIds).includes(targetCard), "opponent never sees your eliminations");
 const ownCard = elimSnap.board.find((c) => c.mine).id;
-const ownCardElim = await activeC.action(roomId, { type: "set_elimination", cardId: ownCard, eliminated: true });
+const ownCardElim = await A.action(roomId, { type: "set_elimination", cardId: ownCard, eliminated: true });
 ok(ownCardElim.status === 200, "your own people can be flipped too (one board)");
-const bogusElim = await activeC.action(roomId, { type: "set_elimination", cardId: crypto.randomUUID(), eliminated: true });
+const bogusElim = await A.action(roomId, { type: "set_elimination", cardId: crypto.randomUUID(), eliminated: true });
 ok(bogusElim.status === 403 || bogusElim.status === 404, "cannot flip a card that is not on this board");
 
-console.log("— prompts");
-const promptQ = await inactive.action(roomId, { type: "ask_question", promptId: "s3" });
-ok(promptQ.status === 200, "suggested prompt question works");
-await activeC.action(roomId, {
-  type: "answer_question",
-  questionId: (await activeC.snapshot(roomId)).data.round.questions.find((q) => q.status === "open").id,
-  answer: "yes",
-});
-
 console.log("— guess & reveal");
-// It's activeC's turn again. Guess wrong on purpose: pick a non-secret card.
-const board = (await activeC.snapshot(roomId)).data.board;
-const oppSecretId = activeC === A ? bSecret : aSecret;
-const wrongCard = board.find((c) => c.id !== oppSecretId && c.id !== (activeC === A ? aSecret : bSecret)).id;
-const guess = await activeC.action(roomId, { type: "submit_guess", cardId: wrongCard });
-ok(guess.status === 200, "guess accepted");
+// B guesses whenever they like — no turn to wait for. Wrong on purpose:
+// B hunts A's secret (aSecret); pick any other card.
+const board = (await B.snapshot(roomId)).data.board;
+const wrongCard = board.find((c) => c.id !== aSecret && c.id !== bSecret).id;
+const guess = await B.action(roomId, { type: "submit_guess", cardId: wrongCard });
+ok(guess.status === 200, "either player can guess at any time — no turns");
 snapA = (await A.snapshot(roomId)).data;
 snapB = (await B.snapshot(roomId)).data;
 ok(snapA.room.status === "completed" && snapB.room.status === "completed", "wrong guess completes the round on both clients");
-const loser = activeC === A ? snapA : snapB;
-const winner = activeC === A ? snapB : snapA;
-ok(loser.round.winnerId === loser.opponent.id && winner.round.winnerId === winner.me.id, "wrong guess awards the round to the opponent");
+ok(snapB.round.winnerId === snapB.opponent.id && snapA.round.winnerId === snapA.me.id, "wrong guess awards the round to the opponent");
 ok(snapA.opponent.secretCardId === bSecret || snapB.opponent.secretCardId === aSecret, "secrets revealed after completion");
-const postMutation = await activeC.action(roomId, { type: "ask_question", text: "Too late?" });
+const postMutation = await A.action(roomId, { type: "set_elimination", cardId: targetCard, eliminated: false });
 ok(postMutation.status === 409, "completed round rejects new gameplay mutations");
 const imgAfter = await B.req(`/api/images/${aCardId}`);
 ok(imgAfter.status === 200, "opponent can view photos at the reveal");

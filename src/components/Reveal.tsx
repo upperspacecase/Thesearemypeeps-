@@ -96,20 +96,6 @@ export function Reveal({ room }: { room: RoomApi }) {
           Everything in this room deletes itself within 24 hours either way.
         </p>
 
-        <details style={{ marginTop: 30, textAlign: "left" }}>
-          <summary className="small dim" style={{ cursor: "pointer" }}>The trail of questions</summary>
-          <div className="qhistory" style={{ marginTop: 14 }}>
-            {round.questions.map((q) => (
-              <div key={q.id} className="qitem">
-                <p className="who">{q.askerId === snap.me.id ? "You" : opp.name} · turn {q.turnNo}</p>
-                <p className="txt">&ldquo;{q.text}&rdquo;</p>
-                <span className="ans">
-                  {q.answer ? { yes: "Yes", no: "No", not_sure: "Not sure", skip: "Skipped" }[q.answer] : "—"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </details>
       </section>
     </main>
   );

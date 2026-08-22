@@ -1,15 +1,5 @@
-import {
-  db,
-  asInt,
-  DECK_MIN,
-  DECK_MAX,
-  type DeckRow,
-  type PersonCardRow,
-  type QuestionRow,
-  type AnswerRow,
-} from "./db";
-import { getRoom, getMembership, players, currentRound, turnCount, isOnline } from "./game";
-import { suggestionsFor } from "./prompts";
+import { db, asInt, DECK_MIN, DECK_MAX, type DeckRow, type PersonCardRow } from "./db";
+import { getRoom, getMembership, players, currentRound, isOnline } from "./game";
 
 // The one place that decides what a viewer may see. Everything the client
 // renders comes from here, so redaction rules live in exactly one function:
@@ -72,21 +62,6 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
     ? [...oppAllCards.map((c) => toView(c, false)), ...myCards.map((c) => toView(c, true))]
     : [];
 
-  // Questions + answers for the current round (room members only, §12).
-  const questions = round
-    ? await db().all<QuestionRow>("SELECT * FROM questions WHERE round_id = ? ORDER BY turn_no", [round.id])
-    : [];
-  const answers = round
-    ? new Map(
-        (
-          await db().all<AnswerRow>(
-            "SELECT a.* FROM answers a JOIN questions q ON q.id = a.question_id WHERE q.round_id = ?",
-            [round.id]
-          )
-        ).map((a) => [a.question_id, a])
-      )
-    : new Map<string, AnswerRow>();
-
   const mySecret = round
     ? await db().get<{ person_card_id: string }>(
         "SELECT person_card_id FROM round_secrets WHERE round_id = ? AND owner_id = ?",
@@ -137,10 +112,6 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
       )
     : 0;
 
-  const nextTurnNo = round
-    ? (await turnCount(round.id)) + (questions.some((q) => q.status === "open") ? 0 : 1)
-    : 1;
-
   return {
     room: {
       id: room.id,
@@ -179,18 +150,8 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
       ? {
           number: round.number,
           status: round.status,
-          activePlayerId: round.active_player_id,
           winnerId: round.winner_id,
           secretsChosen: secretCount,
-          myTurn: round.active_player_id === viewerId,
-          questions: questions.map((q) => ({
-            id: q.id,
-            turnNo: q.turn_no,
-            askerId: q.asker_id,
-            text: q.text,
-            status: q.status,
-            answer: answers.get(q.id)?.answer ?? null,
-          })),
           guesses: guesses.map((g) => ({
             playerId: g.player_id,
             cardId: g.person_card_id,
@@ -198,7 +159,6 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
           })),
         }
       : null,
-    prompts: suggestionsFor(nextTurnNo, room.prompt_policy),
   };
 }
 

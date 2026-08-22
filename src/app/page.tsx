@@ -55,13 +55,13 @@ const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.R
   },
   {
     title: "Start asking",
-    body: "Ask one yes-or-no question at a time.",
+    body: "Ask yes-or-no questions out loud — in person or on your call. The app never gets between you; it just holds the board.",
     qs: ["Are they wearing glasses?", "Have you known them since school?", "Are they the funniest person you know?", "Would you trust them to get you out of trouble?"],
     visual: <MiniBoard down={[1, 3, 6, 9]} />,
   },
   {
     title: "Swipe people away and make your guess",
-    body: "Use each answer to clear the board — swipe someone left when it's not this person. Guess when you think you know who's left.",
+    body: "Use each answer to clear the board — swipe someone left when it's not this person, tap anyone to look closer. Guess when you're sure.",
     visual: <MiniBoard down={[0, 1, 3, 4, 5, 6, 8, 9, 10, 11]} />,
   },
   {

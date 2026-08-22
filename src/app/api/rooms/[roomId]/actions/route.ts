@@ -52,17 +52,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ roomId: st
       case "select_secret":
         await game.selectSecret(userId, roomId, String(body.cardId ?? ""));
         break;
-      case "ask_question":
-        await game.askQuestion(
-          userId,
-          roomId,
-          String(body.text ?? ""),
-          typeof body.promptId === "string" ? body.promptId : undefined
-        );
-        break;
-      case "answer_question":
-        await game.answerQuestion(userId, roomId, String(body.questionId ?? ""), String(body.answer ?? ""));
-        break;
       case "set_elimination":
         await game.setElimination(userId, roomId, String(body.cardId ?? ""), body.eliminated !== false);
         break;
