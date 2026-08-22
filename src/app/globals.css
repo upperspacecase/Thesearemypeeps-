@@ -273,7 +273,9 @@ button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none
 }
 .mech {
   flex: 1; font-size: 12px; line-height: 1.45; color: var(--cream-dim); max-width: 46ch;
+  display: grid; gap: 3px;
 }
+.mech-arrow { color: var(--cream); font-weight: 600; margin-right: 2px; }
 .secret-corner {
   flex-shrink: 0; width: clamp(96px, 24vw, 150px);
   background: var(--cream); color: var(--ink); border-radius: 14px;

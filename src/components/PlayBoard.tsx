@@ -153,11 +153,12 @@ export function PlayBoard({ room }: { room: RoomApi }) {
       </div>
 
       <footer className="playfoot">
-        <p className="mech">
-          <strong style={{ color: "var(--cream)", fontWeight: 600 }}>{remaining} still standing.</strong> Ask questions
-          out loud — nothing goes through the app. Swipe a card left when it&rsquo;s not them. Tap anyone to look
-          closer, guess from there when you&rsquo;re sure.
-        </p>
+        <div className="mech">
+          <p><strong style={{ color: "var(--cream)", fontWeight: 600 }}>{remaining} still standing.</strong></p>
+          <p>Ask questions out loud — nothing goes through the app.</p>
+          <p><span className="mech-arrow" aria-hidden>←</span> Swipe a card left when it&rsquo;s not them.</p>
+          <p>Tap anyone to look closer, guess from there when you&rsquo;re sure.</p>
+        </div>
         {secretCard && (
           <button className="secret-corner" onClick={() => openZoom(secretCard.id)} aria-label={`Your pick: ${secretCard.name}. Tap to enlarge`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
