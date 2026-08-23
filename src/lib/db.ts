@@ -51,6 +51,7 @@ function ddl(dialect: "sqlite" | "pg"): string {
       CHECK (status IN ('waiting_for_player','deck_setup','secret_selection','active','completed','rematch','ended','expired')),
     prompt_policy TEXT NOT NULL DEFAULT 'friends' CHECK (prompt_policy IN ('friends','team_safe')),
     invite_token_hash TEXT NOT NULL UNIQUE,
+    join_code TEXT,
     locked INTEGER NOT NULL DEFAULT 0,
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL,
@@ -159,6 +160,7 @@ function ddl(dialect: "sqlite" | "pg"): string {
   CREATE INDEX IF NOT EXISTS idx_rounds_room ON rounds(room_id, number);
   CREATE INDEX IF NOT EXISTS idx_cards_deck ON person_cards(deck_id, sort_order);
   CREATE INDEX IF NOT EXISTS idx_rooms_expiry ON rooms(expires_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_code ON rooms(join_code);
   `;
 }
 
@@ -187,6 +189,11 @@ function makeSqlite(): Db {
   const sq = new Database(path.join(dataDir, "igc.sqlite"));
   sq.pragma("journal_mode = WAL");
   sq.pragma("foreign_keys = ON");
+  try {
+    sq.exec("ALTER TABLE rooms ADD COLUMN join_code TEXT");
+  } catch {
+    // column already exists (or table doesn't yet) — ddl below handles fresh DBs
+  }
   sq.exec(ddl("sqlite"));
 
   const direct: Exec = {
@@ -249,6 +256,12 @@ function makePg(url: string): Db {
   const ready: Promise<void> = (async () => {
     const client = await pool.connect();
     try {
+      // Migrations that must land BEFORE the ddl (its index references them).
+      try {
+        await client.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS join_code TEXT");
+      } catch {
+        // table doesn't exist yet — the ddl below creates it with the column
+      }
       await client.query(ddl("pg"));
     } finally {
       client.release();
@@ -338,6 +351,7 @@ export interface RoomRow {
     | "expired";
   prompt_policy: "friends" | "team_safe";
   invite_token_hash: string;
+  join_code: string | null;
   locked: number;
   expires_at: string;
   created_at: string;

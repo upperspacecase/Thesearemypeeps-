@@ -11,11 +11,11 @@ export async function POST(req: NextRequest) {
     const userId = await ensureUser();
     rateLimit(`create:${userId}`, 10, 3600_000); // 10 rooms/hour/user
     const body = await req.json().catch(() => ({}));
-    const { roomId, inviteToken } = await createRoom(userId, {
+    const { roomId, inviteToken, joinCode } = await createRoom(userId, {
       displayName: typeof body.displayName === "string" ? body.displayName : undefined,
       promptPolicy: typeof body.promptPolicy === "string" ? body.promptPolicy : undefined,
     });
-    return NextResponse.json({ roomId, inviteToken });
+    return NextResponse.json({ roomId, inviteToken, joinCode });
   } catch (err) {
     return errorResponse(err);
   }

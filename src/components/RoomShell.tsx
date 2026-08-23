@@ -1,8 +1,7 @@
 "use client";
 
 import { useRoom } from "@/lib/useRoom";
-import { DeckBuilder } from "./DeckBuilder";
-import { SharePanel } from "./SharePanel";
+import { SetupFlow } from "./SetupFlow";
 import { SecretSelect } from "./SecretSelect";
 import { PlayBoard } from "./PlayBoard";
 import { Reveal } from "./Reveal";
@@ -53,12 +52,7 @@ export function RoomShell({ roomId }: { roomId: string }) {
       </main>
     );
   } else if (status === "waiting_for_player" || status === "deck_setup") {
-    screen = (
-      <main className="narrow" style={{ padding: "48px 24px 90px" }}>
-        <SharePanel room={room} roomId={roomId} />
-        <DeckBuilder room={room} roomId={roomId} />
-      </main>
-    );
+    screen = <SetupFlow room={room} roomId={roomId} />;
   } else if (status === "secret_selection") {
     screen = <SecretSelect room={room} />;
   } else if (status === "active") {

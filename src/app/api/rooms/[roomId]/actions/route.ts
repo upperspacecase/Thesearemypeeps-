@@ -49,6 +49,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ roomId: st
       case "mark_ready":
         await game.markReady(userId, roomId, body.consent === true);
         break;
+      case "start_game":
+        await game.startGame(userId, roomId);
+        break;
       case "select_secret":
         await game.selectSecret(userId, roomId, String(body.cardId ?? ""));
         break;

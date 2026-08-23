@@ -121,6 +121,7 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
       deckMax: DECK_MAX,
       expiresAt: room.expires_at,
       hostId: room.host_id,
+      joinCode: room.host_id === viewerId ? (room.join_code ?? null) : null,
     },
     me: {
       id: viewerId,

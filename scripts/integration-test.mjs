@@ -81,10 +81,13 @@ const C = new Client("C"); // never a member
 console.log("— create & share");
 const created = await A.req("/api/rooms", { json: { displayName: "Ada", promptPolicy: "friends" } });
 ok(created.status === 200 && created.data.roomId && created.data.inviteToken, "host creates a room without an account");
-const { roomId, inviteToken } = created.data;
+const { roomId, inviteToken, joinCode } = created.data;
+ok(typeof joinCode === "string" && joinCode.length >= 4, "room comes with a short join code");
 
 const peek = await B.req(`/api/join?token=${inviteToken}`);
 ok(peek.status === 200 && peek.data.hostName === "Ada", "invite preview shows host name only");
+const codePeek = await B.req(`/api/join?token=${joinCode.toLowerCase()}`);
+ok(codePeek.status === 200 && codePeek.data.roomId === roomId, "the short code opens the same room (case-insensitive)");
 
 console.log("— decks");
 const snap0 = (await A.snapshot(roomId)).data;
@@ -132,9 +135,17 @@ ok(unnamedReady.status === 400 && /name/i.test(unnamedReady.data.error), "every 
 const blankCard = (await A.snapshot(roomId)).data.me.cards.find((c) => !c.name.trim());
 await A.action(roomId, { type: "rename_card", cardId: blankCard.id, name: `A${size}` });
 await A.action(roomId, { type: "mark_ready", consent: true });
+const earlyStart = await A.action(roomId, { type: "start_game" });
+ok(earlyStart.status === 409, "host cannot start before both boards are ready");
 await B.action(roomId, { type: "mark_ready", consent: true });
 let snapA = (await A.snapshot(roomId)).data;
-ok(snapA.room.status === "secret_selection", "both ready → secret selection");
+ok(snapA.room.status === "deck_setup", "both ready → lobby waits for the host to start");
+const guestStart = await B.action(roomId, { type: "start_game" });
+ok(guestStart.status === 403, "only the host can start the game");
+const hostStart = await A.action(roomId, { type: "start_game" });
+ok(hostStart.status === 200, "host starts the game from the lobby");
+snapA = (await A.snapshot(roomId)).data;
+ok(snapA.room.status === "secret_selection", "start → secret selection");
 
 console.log("— secrets");
 ok(snapA.board.length === size * 2, "the shared board (both decks) is visible at secret selection");

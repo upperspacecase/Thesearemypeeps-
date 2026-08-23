@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   return (
-    <main style={{ minHeight: "100svh", display: "grid", placeItems: "center", padding: 24 }}>
+    <main className="paper" style={{ minHeight: "100svh", display: "grid", placeItems: "center", padding: 24 }}>
       <JoinCard token={token} />
     </main>
   );

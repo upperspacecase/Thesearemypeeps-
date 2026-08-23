@@ -13,6 +13,17 @@ import {
   type RoundRow,
 } from "./db";
 import { hashToken, newInviteToken } from "./tokens";
+import { randomBytes } from "node:crypto";
+
+// Short room code: the fallback when the share link can't travel. Ambiguous
+// characters removed so it survives being read out loud.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function newJoinCode(): string {
+  const bytes = randomBytes(6);
+  let out = "";
+  for (const b of bytes) out += CODE_ALPHABET[b % CODE_ALPHABET.length];
+  return out;
+}
 import { publish } from "./bus";
 import { track } from "./analytics";
 
@@ -105,14 +116,15 @@ async function cardInRoom(roomId: string, cardId: string): Promise<boolean> {
 export async function createRoom(userId: string, opts: { displayName?: string; promptPolicy?: string }) {
   const token = newInviteToken();
   const roomId = randomUUID();
+  const joinCode = newJoinCode();
   const policy = opts.promptPolicy === "team_safe" ? "team_safe" : "friends";
   const t = now();
   await db().tx(async (x) => {
     if (opts.displayName) await setDisplayNameRow(userId, opts.displayName, x);
     await x.run(
-      `INSERT INTO rooms (id, host_id, mode, status, prompt_policy, invite_token_hash, locked, expires_at, created_at, updated_at)
-       VALUES (?, ?, 'quick', 'waiting_for_player', ?, ?, 0, ?, ?, ?)`,
-      [roomId, userId, policy, hashToken(token), new Date(Date.now() + EXPIRY_HOURS * 3600_000).toISOString(), t, t]
+      `INSERT INTO rooms (id, host_id, mode, status, prompt_policy, invite_token_hash, join_code, locked, expires_at, created_at, updated_at)
+       VALUES (?, ?, 'quick', 'waiting_for_player', ?, ?, ?, 0, ?, ?, ?)`,
+      [roomId, userId, policy, hashToken(token), joinCode, new Date(Date.now() + EXPIRY_HOURS * 3600_000).toISOString(), t, t]
     );
     await x.run("INSERT INTO room_players (room_id, user_id, seat, joined_at, last_seen_at) VALUES (?, ?, 1, ?, ?)", [
       roomId,
@@ -123,7 +135,7 @@ export async function createRoom(userId: string, opts: { displayName?: string; p
     await createDeckRow(roomId, userId, x);
   });
   track("room_created", { roomId, mode: policy });
-  return { roomId, inviteToken: token };
+  return { roomId, inviteToken: token, joinCode };
 }
 
 async function createDeckRow(roomId: string, userId: string, t: Exec) {
@@ -133,8 +145,17 @@ async function createDeckRow(roomId: string, userId: string, t: Exec) {
   );
 }
 
+async function roomByTokenOrCode(tokenOrCode: string): Promise<RoomRow | undefined> {
+  const byToken = await db().get<RoomRow>("SELECT * FROM rooms WHERE invite_token_hash = ?", [hashToken(tokenOrCode)]);
+  if (byToken) return byToken;
+  if (/^[A-Za-z0-9]{4,8}$/.test(tokenOrCode)) {
+    return db().get<RoomRow>("SELECT * FROM rooms WHERE join_code = ?", [tokenOrCode.toUpperCase()]);
+  }
+  return undefined;
+}
+
 export async function joinByToken(userId: string, token: string, displayName?: string): Promise<{ roomId: string }> {
-  const room = await db().get<RoomRow>("SELECT * FROM rooms WHERE invite_token_hash = ?", [hashToken(token)]);
+  const room = await roomByTokenOrCode(token);
   if (!room) throw new GameError("This invite link is not valid", 404);
   const live = await getRoom(room.id);
   if (live.status === "expired" || live.status === "ended") throw new GameError("This room has closed", 410);
@@ -168,7 +189,7 @@ export async function joinByToken(userId: string, token: string, displayName?: s
 }
 
 export async function peekInvite(token: string) {
-  const room = await db().get<RoomRow>("SELECT * FROM rooms WHERE invite_token_hash = ?", [hashToken(token)]);
+  const room = await roomByTokenOrCode(token);
   if (!room) throw new GameError("This invite link is not valid", 404);
   const live = await getRoom(room.id);
   const host = await db().get<{ display_name: string }>("SELECT display_name FROM profiles WHERE id = ?", [
@@ -324,31 +345,37 @@ export async function markReady(userId: string, roomId: string, consent: boolean
   });
   track("deck_completed", { roomId });
   track("consent_confirmed", { roomId });
-
-  // Both ready → secret selection begins (state machine §10.1).
-  const all = await players(roomId);
-  let bothReady = all.length === 2 && all.every((p) => p.ready_at);
-  if (bothReady) {
-    for (const p of all) {
-      const d = await deckFor(roomId, p.user_id);
-      if (d?.status !== "ready") bothReady = false;
-    }
-  }
-  if (bothReady) {
-    const round = await currentRound(roomId);
-    await db().tx(async (x) => {
-      await x.run("UPDATE rooms SET status = 'secret_selection', updated_at = ? WHERE id = ?", [now(), roomId]);
-      await x.run("INSERT INTO rounds (id, room_id, number, status, created_at) VALUES (?, ?, ?, 'secret_selection', ?)", [
-        randomUUID(),
-        roomId,
-        (round?.number ?? 0) + 1,
-        now(),
-      ]);
-    });
-    track("both_ready", { roomId });
-  }
   await bumpExpiry(roomId);
-  publish(roomId, { type: "player.ready", userId, bothReady });
+  publish(roomId, { type: "player.ready", userId });
+}
+
+/** The host presses Start once both players are ready (lobby pattern). */
+export async function startGame(userId: string, roomId: string) {
+  const room = await getRoom(roomId);
+  await getMembership(roomId, userId);
+  if (room.host_id !== userId) throw new GameError("Only the player who made the room can start the game", 403);
+  if (!["deck_setup", "waiting_for_player"].includes(room.status))
+    throw new GameError("The game has already started", 409);
+  const all = await players(roomId);
+  if (all.length < 2) throw new GameError("Wait for your person to join first", 409);
+  for (const p of all) {
+    if (!p.ready_at) throw new GameError("Both boards need to be ready first", 409);
+    const d = await deckFor(roomId, p.user_id);
+    if (d?.status !== "ready") throw new GameError("Both boards need to be ready first", 409);
+  }
+  const round = await currentRound(roomId);
+  await db().tx(async (x) => {
+    await x.run("UPDATE rooms SET status = 'secret_selection', updated_at = ? WHERE id = ?", [now(), roomId]);
+    await x.run("INSERT INTO rounds (id, room_id, number, status, created_at) VALUES (?, ?, ?, 'secret_selection', ?)", [
+      randomUUID(),
+      roomId,
+      (round?.number ?? 0) + 1,
+      now(),
+    ]);
+  });
+  track("both_ready", { roomId });
+  await bumpExpiry(roomId);
+  publish(roomId, { type: "round.started" });
 }
 
 export async function deleteDeck(userId: string, roomId: string) {
