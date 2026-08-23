@@ -351,3 +351,26 @@ button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none
 /* photo-as-button in the deck builder (tap to crop) */
 .imgbtn { display: block; width: 100%; padding: 0; border-radius: 9px; cursor: pointer; }
 .imgbtn:focus-visible { outline: 3px solid var(--ember-shadow); outline-offset: 2px; }
+
+/* wordle-style how-to overlay + quiet footer */
+.foot-left { flex: 1; display: flex; align-items: center; gap: 10px; }
+.howto-btn {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid var(--glass-edge); color: var(--cream); font-weight: 600; font-size: 15px;
+  display: grid; place-items: center; background: rgba(255, 240, 231, 0.06);
+}
+.howto-btn:hover { background: rgba(255, 240, 231, 0.14); }
+.howto-btn:focus-visible { outline: 3px solid var(--cream); outline-offset: 2px; }
+.foot-count { font-size: 12px; color: var(--cream-dim); }
+.zoom-card.howto { text-align: left; padding: 22px 24px 20px; position: relative; }
+.zoom-card.howto h2 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 2px; }
+.zoom-card.howto .howto-sub { font-size: 15px; color: #8a4a2c; margin-bottom: 14px; }
+.zoom-card.howto ul { list-style: none; display: grid; gap: 10px; margin-bottom: 14px; }
+.zoom-card.howto li { font-size: 15px; line-height: 1.45; padding-left: 18px; position: relative; }
+.zoom-card.howto li::before { content: "•"; position: absolute; left: 2px; color: var(--ember); }
+.zoom-card.howto .mech-arrow { color: var(--ember); }
+.howto-close {
+  position: absolute; top: 12px; right: 14px; font-size: 18px; line-height: 1;
+  padding: 6px; color: var(--ink); opacity: 0.6;
+}
+.howto-close:hover { opacity: 1; }

@@ -31,6 +31,23 @@ export function PlayBoard({ room }: { room: RoomApi }) {
   const [confirmingGuess, setConfirmingGuess] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(4);
+  const [showHowTo, setShowHowTo] = useState(false);
+
+  // Wordle-style: the rules appear once, the first time someone reaches the
+  // board, then live behind the ? button. The board itself stays mute.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("igc_howto_v1")) setShowHowTo(true);
+    } catch {
+      setShowHowTo(true);
+    }
+  }, []);
+  function closeHowTo() {
+    setShowHowTo(false);
+    try {
+      localStorage.setItem("igc_howto_v1", "1");
+    } catch {}
+  }
 
   const eliminated = useMemo(() => new Set(snap?.me.eliminatedCardIds ?? []), [snap]);
 
@@ -153,11 +170,9 @@ export function PlayBoard({ room }: { room: RoomApi }) {
       </div>
 
       <footer className="playfoot">
-        <div className="mech">
-          <p><strong style={{ color: "var(--cream)", fontWeight: 600 }}>{remaining} still standing.</strong></p>
-          <p>Ask questions out loud — nothing goes through the app.</p>
-          <p><span className="mech-arrow" aria-hidden>←</span> Swipe a card left when it&rsquo;s not them — swipe again to bring them back.</p>
-          <p>Tap anyone to look closer, guess from there when you&rsquo;re sure.</p>
+        <div className="foot-left">
+          <button className="howto-btn" onClick={() => setShowHowTo(true)} aria-label="How to play">?</button>
+          <span className="foot-count">{remaining} still standing</span>
         </div>
         {secretCard && (
           <button className="secret-corner" onClick={() => openZoom(secretCard.id)} aria-label={`Your pick: ${secretCard.name}. Tap to enlarge`}>
@@ -168,6 +183,23 @@ export function PlayBoard({ room }: { room: RoomApi }) {
           </button>
         )}
       </footer>
+
+      {showHowTo && (
+        <div className="zoom-backdrop" role="dialog" aria-modal="true" aria-label="How to play" onClick={closeHowTo}>
+          <div className="zoom-card fade-in howto" onClick={(e) => e.stopPropagation()}>
+            <button className="howto-close" onClick={closeHowTo} aria-label="Close">✕</button>
+            <h2>How to play</h2>
+            <p className="howto-sub">Find the person they picked. The talking is up to you.</p>
+            <ul>
+              <li>Ask yes-or-no questions <strong>out loud</strong> — nothing goes through the app.</li>
+              <li><span className="mech-arrow" aria-hidden>←</span> Swipe a card left when it&rsquo;s not them. Swipe again to bring them back.</li>
+              <li>Tap anyone to look closer — and guess from there when you&rsquo;re sure.</li>
+              <li>A wrong guess loses the round.</li>
+            </ul>
+            <button className="btn solid" onClick={closeHowTo} style={{ marginTop: 6 }}>Got it</button>
+          </div>
+        </div>
+      )}
 
       {zoomCard && (
         <div className="zoom-backdrop" role="dialog" aria-modal="true" aria-label={zoomCard.name} onClick={closeZoom}>
