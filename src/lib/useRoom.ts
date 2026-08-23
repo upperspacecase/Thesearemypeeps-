@@ -28,6 +28,7 @@ export function useRoom(roomId: string) {
       if (!res.ok) return; // transient server hiccup; next poll retries
       const data = (await res.json()) as Snapshot;
       setSnap(data);
+      setDenied(false); // a seat may have just been taken on our behalf
     } catch {
       // transient network error; next poll retries
     }

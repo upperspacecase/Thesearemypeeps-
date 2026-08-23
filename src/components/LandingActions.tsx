@@ -21,6 +21,7 @@ export function LandingActions() {
       });
       try {
         sessionStorage.setItem(`igc_invite_${roomId}`, inviteToken);
+        localStorage.setItem(`igc_invite_${roomId}`, inviteToken);
       } catch {}
       router.push(`/room/${roomId}`);
     } catch (err) {

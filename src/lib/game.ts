@@ -188,6 +188,34 @@ export async function joinByToken(userId: string, token: string, displayName?: s
   return { roomId: room.id };
 }
 
+/** Join from a room URL. Room ids are unguessable UUIDs, so a shared room
+ *  link is as private as an invite token — and people do share the page URL. */
+export async function joinByRoomId(userId: string, roomId: string): Promise<{ roomId: string }> {
+  const live = await getRoom(roomId);
+  if (live.status === "expired" || live.status === "ended") throw new GameError("This room has closed", 410);
+  const existing = await db().get<RoomPlayerRow>("SELECT * FROM room_players WHERE room_id = ? AND user_id = ?", [
+    roomId,
+    userId,
+  ]);
+  if (existing) return { roomId };
+  const seated = await players(roomId);
+  if (seated.length >= 2) throw new GameError("This room already has two players", 403);
+  await db().tx(async (x) => {
+    await x.run("INSERT INTO room_players (room_id, user_id, seat, joined_at, last_seen_at) VALUES (?, ?, 2, ?, ?)", [
+      roomId,
+      userId,
+      now(),
+      now(),
+    ]);
+    await createDeckRow(roomId, userId, x);
+    await x.run("UPDATE rooms SET status = 'deck_setup', locked = 1, updated_at = ? WHERE id = ?", [now(), roomId]);
+  });
+  await bumpExpiry(roomId);
+  track("join_completed", { roomId });
+  publish(roomId, { type: "player.joined", userId });
+  return { roomId };
+}
+
 export async function peekInvite(token: string) {
   const room = await roomByTokenOrCode(token);
   if (!room) throw new GameError("This invite link is not valid", 404);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ensureUser } from "@/lib/auth";
-import { joinByToken, peekInvite } from "@/lib/game";
+import { joinByToken, joinByRoomId, peekInvite } from "@/lib/game";
 import { errorResponse } from "@/lib/api";
 import { sweepExpired } from "@/lib/retention";
 import { rateLimit } from "@/lib/ratelimit";
@@ -25,8 +25,13 @@ export async function POST(req: NextRequest) {
     const userId = await ensureUser();
     rateLimit(`join:${userId}`, 30, 3600_000);
     const body = await req.json().catch(() => ({}));
-    if (typeof body.token !== "string") return NextResponse.json({ error: "Missing token" }, { status: 400 });
     track("join_started", {});
+    if (typeof body.roomId === "string" && body.roomId) {
+      // someone opened a shared room URL without a membership yet
+      const joined = await joinByRoomId(userId, body.roomId);
+      return NextResponse.json(joined);
+    }
+    if (typeof body.token !== "string") return NextResponse.json({ error: "Missing token" }, { status: 400 });
     const { roomId } = await joinByToken(
       userId,
       body.token,

@@ -41,13 +41,20 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
   const bothReady = !!(ready && opp?.ready);
 
   const inviteUrl = (() => {
+    if (typeof window === "undefined") return null;
     try {
-      const token = sessionStorage.getItem(`igc_invite_${roomId}`);
-      return token ? `${location.origin}/r/${token}` : null;
-    } catch {
-      return null;
-    }
+      const token = localStorage.getItem(`igc_invite_${roomId}`) ?? sessionStorage.getItem(`igc_invite_${roomId}`);
+      if (token) return `${location.origin}/r/${token}`;
+      if (snap?.room.joinCode) return `${location.origin}/r/${snap.room.joinCode}`;
+    } catch {}
+    // last resort: the room URL itself takes the open seat
+    return `${location.origin}/room/${roomId}`;
   })();
+
+  // The message that lands in their chat. Says what it is, what to bring, and
+  // that we need to be together for it — the part people actually ask about.
+  const inviteText =
+    "Wanna test a game with me? It's called In Good Company — you bring 5–15 photos of people in your life, I do the same, and we try to guess who the other picked. We'd need about 20 minutes together on a call or in person.";
 
   function doneInviting() {
     setInvited(true);
@@ -57,23 +64,30 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
   }
 
   async function share() {
-    const url = inviteUrl ?? (snap!.room.joinCode ? `${location.origin}/r/${snap!.room.joinCode}` : null);
+    const url = inviteUrl;
     if (!url) return;
-    try {
-      await navigator.share({ title: "In Good Company", text: "Play a game with me — bring photos of your people.", url });
-      doneInviting();
-    } catch {
-      // user dismissed the sheet, or no share support — copy instead
-      copy();
+    // WhatsApp and several other apps keep only `text`, so the link goes in
+    // both places — that way the message always arrives with the invite.
+    const payload = { title: "In Good Company", text: `${inviteText}\n\n${url}`, url };
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(payload);
+        doneInviting();
+        return;
+      } catch (err) {
+        // AbortError = they closed the sheet; anything else means no share
+        if ((err as Error)?.name === "AbortError") return;
+      }
     }
+    copy();
   }
   async function copy() {
-    const url = inviteUrl ?? (snap!.room.joinCode ? `${location.origin}/r/${snap!.room.joinCode}` : null);
+    const url = inviteUrl;
     if (!url) return;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(`${inviteText}\n\n${url}`);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2200);
       doneInviting();
     } catch {}
   }
@@ -147,10 +161,13 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
     body = (
       <>
         <h1 className="paper-h">Invite your person</h1>
-        <p className="paper-p">This game needs exactly one other player. Send them your private link — they tap it and start building right away.</p>
+        <p className="paper-p">
+          They&rsquo;ll get a message explaining the game — bring 5&ndash;15 photos, guess who the other picked, about
+          20 minutes together on a call or in person.
+        </p>
         <div className="landing-actions" style={{ margin: "22px auto 8px" }}>
           <button className="btn ink" onClick={share}>Invite your person</button>
-          <button className="btn paperline" onClick={copy}>{copied ? "Copied!" : "Copy link"}</button>
+          <button className="btn paperline" onClick={copy}>{copied ? "Copied — paste it to them" : "Copy invite"}</button>
         </div>
         {snap.room.joinCode && (
           <p className="paper-p small-note">

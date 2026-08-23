@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-// Re-frame one card's photo: drag to move, pinch or slider to zoom, one
-// button — "Use this crop". Opened by tapping a photo in the deck builder.
-// Cropping happens on-device; only the framed card uploads.
+// Frame a photo into the 3:4 card: drag to move, pinch or slide to zoom.
+// The frame is sized in real screen pixels so a finger moves the photo 1:1,
+// then the same framing is redrawn at card resolution on save. Cropping is
+// on-device; only the framed card ever uploads.
 
 const OUT_W = 480;
 const OUT_H = 640;
-const K = 0.55; // on-screen scale of the crop stage
 
 export function CropModal({
   src,
@@ -21,141 +21,132 @@ export function CropModal({
   onSave: (blob: Blob) => void | Promise<void>;
   onClose: () => void;
 }) {
+  const frameRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+  const [frame, setFrame] = useState({ w: 0, h: 0 });
+  const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [off, setOff] = useState({ x: 0, y: 0 });
   const [busy, setBusy] = useState(false);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinchStart = useRef<{ dist: number; zoom: number } | null>(null);
+  const pinch = useRef<{ dist: number; zoom: number } | null>(null);
 
+  useLayoutEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const measure = () => setFrame({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // scale at which the photo exactly covers the frame
+  const base = nat && frame.w ? Math.max(frame.w / nat.w, frame.h / nat.h) : 1;
+  const scale = base * zoom;
+  const dispW = nat ? nat.w * scale : 0;
+  const dispH = nat ? nat.h * scale : 0;
+
+  const clamp = (o: { x: number; y: number }, w: number, h: number) => ({
+    x: Math.min(0, Math.max(frame.w - w, o.x)),
+    y: Math.min(0, Math.max(frame.h - h, o.y)),
+  });
+
+  // centre the photo whenever it (or the frame) changes size
   useEffect(() => {
-    setDims(null);
+    if (!nat || !frame.w) return;
+    const s = Math.max(frame.w / nat.w, frame.h / nat.h);
     setZoom(1);
-    setOff({ x: 0, y: 0 });
-    setBusy(false);
-  }, [src]);
+    setOff({ x: (frame.w - nat.w * s) / 2, y: (frame.h - nat.h * s) / 2 });
+  }, [nat, frame.w, frame.h]);
 
-  const s0 = dims ? Math.max(OUT_W / dims.w, OUT_H / dims.h) : 1;
-  const s = s0 * zoom;
-
-  function clamp(o: { x: number; y: number }, sc: number) {
-    if (!dims) return o;
-    return {
-      x: Math.min(0, Math.max(OUT_W - dims.w * sc, o.x)),
-      y: Math.min(0, Math.max(OUT_H - dims.h * sc, o.y)),
-    };
-  }
-
-  useEffect(() => {
-    if (dims) {
-      const sc = Math.max(OUT_W / dims.w, OUT_H / dims.h);
-      setOff({ x: (OUT_W - dims.w * sc) / 2, y: (OUT_H - dims.h * sc) / 2 });
-    }
-  }, [dims]);
-
-  function zoomTo(z: number) {
-    const nz = Math.min(3, Math.max(1, z));
-    if (dims) {
-      const os = s0 * zoom;
-      const ns = s0 * nz;
-      // keep the frame's center steady while zooming
+  function zoomTo(next: number) {
+    const nz = Math.min(3, Math.max(1, next));
+    if (nat && frame.w) {
+      const oldW = nat.w * base * zoom;
+      const newW = nat.w * base * nz;
+      const newH = nat.h * base * nz;
+      const ratio = newW / oldW;
       setOff((o) =>
-        clamp({ x: OUT_W / 2 - (OUT_W / 2 - o.x) * (ns / os), y: OUT_H / 2 - (OUT_H / 2 - o.y) * (ns / os) }, ns)
+        clamp(
+          { x: frame.w / 2 - (frame.w / 2 - o.x) * ratio, y: frame.h / 2 - (frame.h / 2 - o.y) * ratio },
+          newW,
+          newH
+        )
       );
     }
     setZoom(nz);
   }
 
-  function onPointerDown(e: React.PointerEvent) {
+  function down(e: React.PointerEvent) {
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
-      pinchStart.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom };
+      pinch.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom };
     }
   }
-  function onPointerMove(e: React.PointerEvent) {
+  function move(e: React.PointerEvent) {
     const prev = pointers.current.get(e.pointerId);
     if (!prev) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.current.size === 2 && pinchStart.current) {
+    if (pointers.current.size === 2 && pinch.current) {
       const [a, b] = [...pointers.current.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinchStart.current.dist > 0) zoomTo(pinchStart.current.zoom * (d / pinchStart.current.dist));
+      if (pinch.current.dist > 0) zoomTo(pinch.current.zoom * (d / pinch.current.dist));
     } else if (pointers.current.size === 1) {
-      const dx = (e.clientX - prev.x) / K;
-      const dy = (e.clientY - prev.y) / K;
-      setOff((o) => clamp({ x: o.x + dx, y: o.y + dy }, s));
+      setOff((o) => clamp({ x: o.x + (e.clientX - prev.x), y: o.y + (e.clientY - prev.y) }, dispW, dispH));
     }
   }
-  function onPointerUp(e: React.PointerEvent) {
+  function up(e: React.PointerEvent) {
     pointers.current.delete(e.pointerId);
-    if (pointers.current.size < 2) pinchStart.current = null;
+    if (pointers.current.size < 2) pinch.current = null;
   }
 
   async function save() {
-    if (!dims || !imgRef.current || busy) return;
+    if (!nat || !imgRef.current || !frame.w || busy) return;
     setBusy(true);
+    const k = OUT_W / frame.w; // screen pixels → card pixels
     const canvas = document.createElement("canvas");
     canvas.width = OUT_W;
     canvas.height = OUT_H;
     const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(imgRef.current, off.x, off.y, dims.w * s, dims.h * s);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
+    ctx.drawImage(imgRef.current, off.x * k, off.y * k, dispW * k, dispH * k);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.86));
     if (blob) await onSave(blob);
     setBusy(false);
   }
 
   return (
     <div className="zoom-backdrop" role="dialog" aria-modal="true" aria-label={`Adjust photo${title ? ` of ${title}` : ""}`} onClick={onClose}>
-      <div className="zoom-card fade-in" style={{ width: "min(360px,100%)" }} onClick={(e) => e.stopPropagation()}>
-        <p className="eyebrow" style={{ color: "var(--orange)", marginBottom: 10 }}>
-          {title || "Adjust photo"} · drag to move, pinch or slide to zoom
-        </p>
-        <div className="crop-stage" style={{ width: OUT_W * K, height: OUT_H * K }}>
-          <div
-            className="crop-frame"
-            style={{ width: OUT_W, height: OUT_H, transform: `scale(${K})` }}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-          >
+      <div className="zoom-card fade-in cropper" style={{ width: "min(340px, 100%)" }} onClick={(e) => e.stopPropagation()}>
+        <p className="crop-hint">Drag to move · pinch or slide to zoom</p>
+        <div className="crop-stage">
+          <div ref={frameRef} className="crop-frame" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imgRef}
+              className="crop-img"
               src={src}
               alt="Photo being framed"
               draggable={false}
-              onLoad={(e) => setDims({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                width: dims?.w,
-                height: dims?.h,
-                maxWidth: "none",
-                transformOrigin: "0 0",
-                transform: `translate(${off.x}px, ${off.y}px) scale(${s})`,
-              }}
+              onLoad={(e) => setNat({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+              style={{ width: dispW || undefined, height: dispH || undefined, transform: `translate(${off.x}px, ${off.y}px)` }}
             />
           </div>
         </div>
         <input
           type="range"
+          className="crop-zoom"
           min={100}
           max={300}
           value={Math.round(zoom * 100)}
           onChange={(e) => zoomTo(Number(e.target.value) / 100)}
           aria-label="Zoom"
-          style={{ width: "80%", margin: "14px 0 4px", accentColor: "var(--ember)" }}
         />
-        <div className="zoom-actions">
-          <button className="btn ink" onClick={save} disabled={!dims || busy}>
-            {busy ? "Saving…" : "Use this crop"}
-          </button>
-        </div>
+        <button className="btn ink" onClick={save} disabled={!nat || busy} style={{ width: "100%" }}>
+          {busy ? "Saving…" : "Use this crop"}
+        </button>
       </div>
     </div>
   );

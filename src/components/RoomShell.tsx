@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRoom } from "@/lib/useRoom";
+import { api } from "@/lib/client";
 import { SetupFlow } from "./SetupFlow";
 import { SecretSelect } from "./SecretSelect";
 import { PlayBoard } from "./PlayBoard";
@@ -8,7 +10,27 @@ import { Reveal } from "./Reveal";
 
 export function RoomShell({ roomId }: { roomId: string }) {
   const room = useRoom(roomId);
-  const { snap, denied, error, setError } = room;
+  const { snap, denied, error, setError, refresh } = room;
+  const [joinFailed, setJoinFailed] = useState(false);
+  const tried = useRef(false);
+
+  // Landing on a shared room link without a seat yet: take the open seat
+  // rather than showing a locked door.
+  useEffect(() => {
+    if (!denied || tried.current) return;
+    tried.current = true;
+    api<{ roomId: string }>("/api/join", { roomId })
+      .then(() => refresh())
+      .catch(() => setJoinFailed(true));
+  }, [denied, roomId, refresh]);
+
+  if (denied && !joinFailed) {
+    return (
+      <main className="paper">
+        <p className="dim">Joining the game…</p>
+      </main>
+    );
+  }
 
   if (denied) {
     return (
