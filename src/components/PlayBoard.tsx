@@ -196,7 +196,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
               <li>Tap anyone to look closer — and guess from there when you&rsquo;re sure.</li>
               <li>A wrong guess loses the round.</li>
             </ul>
-            <button className="btn solid" onClick={closeHowTo} style={{ marginTop: 6 }}>Got it</button>
+            <button className="btn ink" onClick={closeHowTo} style={{ marginTop: 6 }}>Got it</button>
           </div>
         </div>
       )}
@@ -214,7 +214,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
             {!confirmingGuess ? (
               <div className="zoom-actions">
                 <button
-                  className="btn ghost sm"
+                  className="btn paperline sm"
                   onClick={() => {
                     setOut(zoomCard.id, !isOut(zoomCard.id));
                     closeZoom();
@@ -222,20 +222,20 @@ export function PlayBoard({ room }: { room: RoomApi }) {
                 >
                   {isOut(zoomCard.id) ? "Bring them back" : "It's not this person"}
                 </button>
-                <button className="btn solid sm" onClick={() => setConfirmingGuess(true)}>
+                <button className="btn ink sm" onClick={() => setConfirmingGuess(true)}>
                   This is my guess
                 </button>
-                <button className="btn ghost sm" onClick={closeZoom}>Close</button>
+                <button className="btn paperline sm" onClick={closeZoom}>Close</button>
               </div>
             ) : (
               <div className="zoom-actions">
                 <p className="small" style={{ width: "100%", color: "var(--ink)", opacity: 0.75 }}>
                   A wrong guess ends the round — and loses it. Sure?
                 </p>
-                <button className="btn solid sm" onClick={() => action({ type: "submit_guess", cardId: zoomCard.id })}>
+                <button className="btn ink sm" onClick={() => action({ type: "submit_guess", cardId: zoomCard.id })}>
                   Lock in {zoomCard.name}
                 </button>
-                <button className="btn ghost sm" onClick={() => setConfirmingGuess(false)}>Back</button>
+                <button className="btn paperline sm" onClick={() => setConfirmingGuess(false)}>Back</button>
               </div>
             )}
           </div>

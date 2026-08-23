@@ -27,6 +27,8 @@ export function JoinCard({ token }: { token: string }) {
 
   return (
     <div className="paper-panel" style={{ textAlign: "center" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="brand-mark" src="/logo.png" alt="" width={900} height={821} />
       <p className="paper-brand">In Good Company</p>
       {error ? (
         <>

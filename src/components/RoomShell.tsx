@@ -12,15 +12,15 @@ export function RoomShell({ roomId }: { roomId: string }) {
 
   if (denied) {
     return (
-      <main style={{ minHeight: "100svh", display: "grid", placeItems: "center", padding: 24 }}>
-        <div className="panel" style={{ width: "min(480px,100%)", textAlign: "center" }}>
+      <main className="paper">
+        <div className="paper-panel">
           <p className="eyebrow">In Good Company</p>
           <h1 className="display" style={{ fontSize: 30, marginBottom: 12 }}>This room isn&rsquo;t yours to see</h1>
           <p className="dim">
             Rooms are private to their two players. If someone invited you, open their invite link — it&rsquo;s the only
             door in.
           </p>
-          <a className="btn ghost" href="/" style={{ marginTop: 24 }}>Go home</a>
+          <a className="btn ink" href="/" style={{ marginTop: 24 }}>Go home</a>
         </div>
       </main>
     );
@@ -28,7 +28,7 @@ export function RoomShell({ roomId }: { roomId: string }) {
 
   if (!snap) {
     return (
-      <main style={{ minHeight: "100svh", display: "grid", placeItems: "center" }}>
+      <main className="paper">
         <p className="dim">Setting the table…</p>
       </main>
     );
@@ -38,8 +38,8 @@ export function RoomShell({ roomId }: { roomId: string }) {
   let screen: React.ReactNode;
   if (status === "ended" || status === "expired") {
     screen = (
-      <main style={{ minHeight: "100svh", display: "grid", placeItems: "center", padding: 24 }}>
-        <div className="panel" style={{ width: "min(520px,100%)", textAlign: "center" }}>
+      <main className="paper">
+        <div className="paper-panel">
           <p className="eyebrow">In Good Company</p>
           <h1 className="display" style={{ fontSize: 32, marginBottom: 12 }}>
             {status === "expired" ? "This room has expired" : "This room has closed"}
@@ -47,7 +47,7 @@ export function RoomShell({ roomId }: { roomId: string }) {
           <p className="dim">
             One-time rooms and their photos are deleted after the game. Thanks for bringing your people.
           </p>
-          <a className="btn solid" href="/" style={{ marginTop: 26 }}>Start a new game</a>
+          <a className="btn ink" href="/" style={{ marginTop: 26 }}>Start a new game</a>
         </div>
       </main>
     );

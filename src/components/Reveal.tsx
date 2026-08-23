@@ -17,14 +17,14 @@ export function Reveal({ room }: { room: RoomApi }) {
   const guessedCard = finalGuess && board.find((c) => c.id === finalGuess.cardId);
 
   return (
-    <main className="narrow" style={{ padding: "48px 24px 90px" }}>
-      <section className="panel fade-in" style={{ textAlign: "center" }}>
+    <main className="paper paper-page">
+      <section className="paper-panel fade-in">
         <p className="eyebrow">Round {round.number} · the reveal</p>
-        <h1 className="display" style={{ fontSize: "clamp(30px,5vw,42px)", marginBottom: 6 }}>
+        <h1 className="paper-h" style={{ fontSize: "clamp(30px,5vw,42px)", marginBottom: 6 }}>
           {iWon ? "You found them." : `${opp.name} found yours first.`}
         </h1>
         {finalGuess && guessedCard && (
-          <p className="dim small" style={{ marginBottom: 26 }}>
+          <p className="paper-p small" style={{ marginBottom: 26 }}>
             {finalGuess.playerId === snap.me.id ? "You" : opp.name} guessed {guessedCard.name} —{" "}
             {finalGuess.correct ? "right" : "wrong, which ends the round"}.
           </p>
@@ -36,7 +36,7 @@ export function Reveal({ room }: { room: RoomApi }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={theirSecret.imageUrl} alt={`Photo of ${theirSecret.name}`} />
               <figcaption className="nm">{theirSecret.name}</figcaption>
-              <p className="serif-q" style={{ color: "#6f5f42", fontSize: 14, padding: "0 4px 6px" }}>
+              <p className="serif-q" style={{ color: "var(--orange)", fontSize: 14, padding: "0 4px 6px" }}>
                 {opp.name}&rsquo;s pick
               </p>
             </figure>
@@ -46,14 +46,14 @@ export function Reveal({ room }: { room: RoomApi }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={mySecret.imageUrl} alt={`Photo of ${mySecret.name}`} />
               <figcaption className="nm">{mySecret.name}</figcaption>
-              <p className="serif-q" style={{ color: "#6f5f42", fontSize: 14, padding: "0 4px 6px" }}>
+              <p className="serif-q" style={{ color: "var(--orange)", fontSize: 14, padding: "0 4px 6px" }}>
                 your pick
               </p>
             </figure>
           )}
         </div>
 
-        <p className="serif-q" style={{ fontSize: "clamp(19px,3vw,24px)", color: "var(--good)", margin: "22px auto 4px", maxWidth: "30ch" }}>
+        <p className="serif-q" style={{ fontSize: "clamp(19px,3vw,24px)", margin: "22px auto 4px", maxWidth: "30ch" }}>
           &ldquo;What should I know about this person?&rdquo;
         </p>
         <p className="small dim" style={{ marginBottom: 28 }}>Ask each other — out loud. That part stays between you.</p>
@@ -62,8 +62,8 @@ export function Reveal({ room }: { room: RoomApi }) {
           <div style={{ marginBottom: 26 }}>
             <p className="small dim" style={{ marginBottom: 10 }}>Did you learn something you didn&rsquo;t know?</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button className="btn ghost sm" onClick={() => { action({ type: "report_outcome", learned: true }); setOutcomeSent(true); }}>Yes, I did</button>
-              <button className="btn ghost sm" onClick={() => { action({ type: "report_outcome", learned: false }); setOutcomeSent(true); }}>Not this time</button>
+              <button className="btn paperline sm" onClick={() => { action({ type: "report_outcome", learned: true }); setOutcomeSent(true); }}>Yes, I did</button>
+              <button className="btn paperline sm" onClick={() => { action({ type: "report_outcome", learned: false }); setOutcomeSent(true); }}>Not this time</button>
             </div>
           </div>
         ) : (
@@ -71,7 +71,7 @@ export function Reveal({ room }: { room: RoomApi }) {
         )}
 
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <button className="btn solid" onClick={() => action({ type: "request_rematch" })} disabled={snap.me.rematchRequested}>
+          <button className="btn ink" onClick={() => action({ type: "request_rematch" })} disabled={snap.me.rematchRequested}>
             {snap.me.rematchRequested
               ? opp.rematchRequested
                 ? "Starting…"
@@ -80,7 +80,7 @@ export function Reveal({ room }: { room: RoomApi }) {
                 ? `${opp.name} wants a rematch — accept`
                 : "Rematch"}
           </button>
-          <a className="btn ghost" href="/">Share a new room</a>
+          <a className="btn paperline" href="/">Share a new room</a>
           <button
             className="btn danger"
             onClick={() => {

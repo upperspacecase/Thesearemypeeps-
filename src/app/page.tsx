@@ -3,12 +3,13 @@ import { LandingActions } from "@/components/LandingActions";
 // Wordle-style splash: what the game is, one button, and a picture of play.
 // The rules live in the game itself (first-run overlay), not on this page.
 
+// the four rope colours of the mark, cycling across the mock board
 const FACES: Array<[string, string, string]> = [
-  ["Maya", "#EAD9BB", "#B0684A"], ["Sam", "#E3D2AE", "#6e7f58"], ["Priya", "#EAD9BB", "#3F6E63"],
-  ["Jack", "#E9D4B4", "#7A5B44"], ["Nadia", "#E3D2AE", "#B0684A"], ["Omar", "#EAD9BB", "#6e7f58"],
-  ["Elif", "#E9D4B4", "#3F6E63"], ["Theo", "#E3D2AE", "#7A5B44"], ["June", "#EAD9BB", "#B0684A"],
-  ["Ravi", "#E9D4B4", "#6e7f58"], ["Kate", "#E3D2AE", "#3F6E63"], ["Milo", "#EAD9BB", "#7A5B44"],
-  ["Ana", "#E9D4B4", "#B0684A"], ["Ben", "#E3D2AE", "#6e7f58"], ["Cleo", "#EAD9BB", "#3F6E63"],
+  ["Maya", "#F6EDDC", "#EE7A18"], ["Sam", "#F2E9D6", "#DB3A3E"], ["Priya", "#F6EDDC", "#3F8A24"],
+  ["Jack", "#F2E9D6", "#F0A800"], ["Nadia", "#F6EDDC", "#EE7A18"], ["Omar", "#F2E9D6", "#DB3A3E"],
+  ["Elif", "#F6EDDC", "#3F8A24"], ["Theo", "#F2E9D6", "#F0A800"], ["June", "#F6EDDC", "#EE7A18"],
+  ["Ravi", "#F2E9D6", "#DB3A3E"], ["Kate", "#F6EDDC", "#3F8A24"], ["Milo", "#F2E9D6", "#F0A800"],
+  ["Ana", "#F6EDDC", "#EE7A18"], ["Ben", "#F2E9D6", "#DB3A3E"], ["Cleo", "#F6EDDC", "#3F8A24"],
 ];
 const DOWN = new Set([1, 4, 9, 12]);
 
@@ -37,7 +38,7 @@ function GameplayMock() {
         <span className="pm-q">?</span>
         <span className="pm-count">11 still standing</span>
         <div className="pm-secret">
-          <div className="pm-face"><Face bg="#EFA07E" fg="#7C2504" /></div>
+          <div className="pm-face"><Face bg="#F6EDDC" fg="#EE7A18" /></div>
           <span>you picked</span>
           <strong>Priya</strong>
         </div>
@@ -51,21 +52,10 @@ export default function Home() {
     <>
       <main className="paper" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0 }}>
         <div className="paper-col" style={{ flex: 1, alignContent: "center" }}>
-          <svg className="logo-tile" viewBox="0 0 66 66" aria-hidden>
-            <rect x="1.5" y="1.5" width="63" height="63" rx="10" fill="none" stroke="#22302B" strokeWidth="3" />
-            {[
-              ["#F3ECD7", "#F3ECD7", "#F3ECD7"],
-              ["#F3ECD7", "#D9A441", "#9BB08A"],
-              ["#C0704F", "#35707B", "#9BB08A"],
-            ].map((row, r) =>
-              row.map((fill, c) => (
-                <rect key={`${r}${c}`} x={7 + c * 18} y={7 + r * 18} width={16} height={16} rx={3} fill={fill} stroke="#22302B" strokeWidth="1.6" />
-              ))
-            )}
-          </svg>
-
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src="/logo.png" alt="In Good Company" width={900} height={821} />
           <h1 className="paper-title">In Good Company</h1>
-          <p className="paper-sub">Get to know someone through the people who made them.</p>
+          <p className="paper-sub">A game about the people in your life.</p>
 
           <div className="hero-mock">
             <span className="chip-madefor">Made for two</span>

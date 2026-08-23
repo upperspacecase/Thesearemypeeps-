@@ -110,7 +110,7 @@ export function CropModal({
   return (
     <div className="zoom-backdrop" role="dialog" aria-modal="true" aria-label={`Adjust photo${title ? ` of ${title}` : ""}`} onClick={onClose}>
       <div className="zoom-card fade-in" style={{ width: "min(360px,100%)" }} onClick={(e) => e.stopPropagation()}>
-        <p className="eyebrow" style={{ color: "#6f5f42", marginBottom: 10 }}>
+        <p className="eyebrow" style={{ color: "var(--orange)", marginBottom: 10 }}>
           {title || "Adjust photo"} · drag to move, pinch or slide to zoom
         </p>
         <div className="crop-stage" style={{ width: OUT_W * K, height: OUT_H * K }}>
@@ -152,7 +152,7 @@ export function CropModal({
           style={{ width: "80%", margin: "14px 0 4px", accentColor: "var(--ember)" }}
         />
         <div className="zoom-actions">
-          <button className="btn solid" onClick={save} disabled={!dims || busy}>
+          <button className="btn ink" onClick={save} disabled={!dims || busy}>
             {busy ? "Saving…" : "Use this crop"}
           </button>
         </div>

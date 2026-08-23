@@ -248,7 +248,9 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
   return (
     <main className="paper paper-page">
       <div className="paper-panel">
-        <p className="paper-brand">In Good Company</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="brand-mark" src="/logo.png" alt="" width={900} height={821} />
+      <p className="paper-brand">In Good Company</p>
         {body}
       </div>
       <input

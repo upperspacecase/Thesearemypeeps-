@@ -12,13 +12,13 @@ export function SecretSelect({ room }: { room: RoomApi }) {
   const chosen = board.find((c) => c.id === (picked ?? confirmed));
 
   return (
-    <main className="narrow" style={{ padding: "48px 24px 90px" }}>
-      <section className="panel fade-in">
+    <main className="paper paper-page">
+      <section className="paper-panel fade-in">
         <p className="eyebrow">Round {snap.round?.number ?? 1} · secret choice</p>
-        <h1 className="display" style={{ fontSize: "clamp(26px,4.5vw,36px)", marginBottom: 8 }}>
+        <h1 className="paper-h" style={{ fontSize: "clamp(26px,4.5vw,36px)", marginBottom: 8 }}>
           Choose someone secretly
         </h1>
-        <p className="dim small" style={{ maxWidth: "52ch", marginBottom: 24 }}>
+        <p className="paper-p" style={{ marginBottom: 22 }}>
           Everyone is on one board — your people and {snap.opponent?.name ?? "theirs"}&rsquo;s. Pick anyone.{" "}
           {snap.opponent?.name ?? "The other player"} will see the whole board too, but never who you chose.
         </p>
@@ -44,7 +44,7 @@ export function SecretSelect({ room }: { room: RoomApi }) {
             Locked in — waiting for {snap.opponent?.name ?? "the other player"} ({snap.round?.secretsChosen ?? 1}/2)
           </p>
         ) : (
-          <button className="btn solid" disabled={!picked} onClick={() => picked && action({ type: "select_secret", cardId: picked })}>
+          <button className="btn ink" disabled={!picked} onClick={() => picked && action({ type: "select_secret", cardId: picked })}>
             {chosen ? `Lock in ${chosen.name}` : "Tap a person to choose"}
           </button>
         )}
