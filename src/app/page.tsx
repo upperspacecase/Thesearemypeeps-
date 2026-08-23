@@ -4,11 +4,11 @@ import { StartButtons } from "@/components/StartButtons";
 // The rules live in the game itself (first-run overlay), not on this page.
 
 const FACES: Array<[string, string, string]> = [
-  ["Maya", "#F6B49B", "#A93407"], ["Sam", "#FFD9BF", "#C63E0B"], ["Priya", "#EFA07E", "#7C2504"],
-  ["Jack", "#FFC3A0", "#A93407"], ["Nadia", "#F8C6AC", "#8F2C05"], ["Omar", "#FFB88E", "#7C2504"],
-  ["Elif", "#F2AB8A", "#A93407"], ["Theo", "#FFD2B4", "#B53908"], ["June", "#F6B49B", "#7C2504"],
-  ["Ravi", "#FFC9A6", "#A93407"], ["Kate", "#EFA985", "#8F2C05"], ["Milo", "#FFDCC4", "#C63E0B"],
-  ["Ana", "#F6B49B", "#A93407"], ["Ben", "#FFD9BF", "#C63E0B"], ["Cleo", "#EFA07E", "#7C2504"],
+  ["Maya", "#EAD9BB", "#B0684A"], ["Sam", "#E3D2AE", "#6e7f58"], ["Priya", "#EAD9BB", "#3F6E63"],
+  ["Jack", "#E9D4B4", "#7A5B44"], ["Nadia", "#E3D2AE", "#B0684A"], ["Omar", "#EAD9BB", "#6e7f58"],
+  ["Elif", "#E9D4B4", "#3F6E63"], ["Theo", "#E3D2AE", "#7A5B44"], ["June", "#EAD9BB", "#B0684A"],
+  ["Ravi", "#E9D4B4", "#6e7f58"], ["Kate", "#E3D2AE", "#3F6E63"], ["Milo", "#EAD9BB", "#7A5B44"],
+  ["Ana", "#E9D4B4", "#B0684A"], ["Ben", "#E3D2AE", "#6e7f58"], ["Cleo", "#EAD9BB", "#3F6E63"],
 ];
 const DOWN = new Set([1, 4, 9, 12]);
 
@@ -51,17 +51,18 @@ export default function Home() {
     <main
       style={{
         position: "relative", minHeight: "100svh", overflow: "hidden",
-        display: "grid", placeItems: "center", padding: "72px 24px 48px",
+        display: "flex", flexDirection: "column", padding: "56px 24px 18px",
         background:
-          "radial-gradient(1100px 700px at 78% 18%, #F0561A 0%, transparent 60%), radial-gradient(900px 900px at 12% 85%, #C63E0B 0%, transparent 55%), var(--ember)",
+          "radial-gradient(1100px 700px at 78% 18%, #3D7F8A 0%, transparent 60%), radial-gradient(900px 900px at 12% 85%, #27565F 0%, transparent 55%), var(--ember)",
       }}
     >
       <div className="figure" aria-hidden>
-        <span style={{ width: 520, height: 640, right: "8%", top: "4%", background: "radial-gradient(closest-side,rgba(246,180,155,.55),transparent 72%)" }} />
-        <span style={{ width: 420, height: 560, right: "16%", top: "34%", background: "radial-gradient(closest-side,rgba(255,224,206,.5),transparent 70%)" }} />
-        <span style={{ width: 640, height: 520, left: "-10%", bottom: "-14%", background: "radial-gradient(closest-side,rgba(124,37,4,.55),transparent 72%)" }} />
+        <span style={{ width: 520, height: 640, right: "8%", top: "4%", background: "radial-gradient(closest-side,rgba(217,200,166,.3),transparent 72%)" }} />
+        <span style={{ width: 420, height: 560, right: "16%", top: "34%", background: "radial-gradient(closest-side,rgba(243,236,215,.22),transparent 70%)" }} />
+        <span style={{ width: 640, height: 520, left: "-10%", bottom: "-14%", background: "radial-gradient(closest-side,rgba(20,45,38,.55),transparent 72%)" }} />
       </div>
 
+      <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
       <div className="splash">
         <div className="panel" style={{ width: "min(560px,100%)", borderRadius: 40 }}>
           <h1 className="display" style={{ marginBottom: 22, fontSize: "clamp(27px,4.2vw,38px)" }}>
@@ -79,14 +80,15 @@ export default function Home() {
           </div>
 
           <StartButtons />
-          <p className="small dim" style={{ marginTop: 18 }}>
-            One private link. No download. Photos delete themselves after the game ·{" "}
-            <a href="/privacy">privacy</a>
-          </p>
         </div>
 
         <GameplayMock />
       </div>
+      </div>
+
+      <footer style={{ position: "relative", textAlign: "center", fontSize: 13, color: "var(--cream-dim)", paddingTop: 20 }}>
+        One private link. No download. Photos delete themselves after the game · <a href="/privacy">privacy</a>
+      </footer>
     </main>
   );
 }

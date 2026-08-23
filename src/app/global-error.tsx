@@ -6,7 +6,7 @@
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: "#e1490f", color: "#fff6ef", fontFamily: "system-ui, sans-serif", minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
+      <body style={{ margin: 0, background: "#35707b", color: "#f3ecd7", fontFamily: "system-ui, sans-serif", minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
         <div>
           <h1 style={{ fontWeight: 400, fontSize: 30, marginBottom: 12 }}>Something hiccuped</h1>
           <p style={{ opacity: 0.85, marginBottom: 6 }}>Your game is safe on the server.</p>
@@ -15,7 +15,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
           </p>
           <button
             onClick={() => location.reload()}
-            style={{ font: "inherit", fontWeight: 500, background: "#fff6ef", color: "#3a1707", border: "none", borderRadius: 999, padding: "13px 26px", cursor: "pointer" }}
+            style={{ font: "inherit", fontWeight: 500, background: "#f3ecd7", color: "#24423b", border: "none", borderRadius: 999, padding: "13px 26px", cursor: "pointer" }}
           >
             Reload
           </button>

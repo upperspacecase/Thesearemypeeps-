@@ -246,7 +246,7 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
               type="checkbox"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
-              style={{ marginTop: 5, width: 18, height: 18, accentColor: "#fff6ef" }}
+              style={{ marginTop: 5, width: 18, height: 18, accentColor: "#f3ecd7" }}
             />
             <span className="small dim">
               I have permission to share these photos in this private game, and everyone shown is an adult. Only the two

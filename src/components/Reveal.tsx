@@ -36,7 +36,7 @@ export function Reveal({ room }: { room: RoomApi }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={theirSecret.imageUrl} alt={`Photo of ${theirSecret.name}`} />
               <figcaption className="nm">{theirSecret.name}</figcaption>
-              <p className="serif-q" style={{ color: "#8A4A2C", fontSize: 14, padding: "0 4px 6px" }}>
+              <p className="serif-q" style={{ color: "#6f5f42", fontSize: 14, padding: "0 4px 6px" }}>
                 {opp.name}&rsquo;s pick
               </p>
             </figure>
@@ -46,7 +46,7 @@ export function Reveal({ room }: { room: RoomApi }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={mySecret.imageUrl} alt={`Photo of ${mySecret.name}`} />
               <figcaption className="nm">{mySecret.name}</figcaption>
-              <p className="serif-q" style={{ color: "#8A4A2C", fontSize: 14, padding: "0 4px 6px" }}>
+              <p className="serif-q" style={{ color: "#6f5f42", fontSize: 14, padding: "0 4px 6px" }}>
                 your pick
               </p>
             </figure>

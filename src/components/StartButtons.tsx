@@ -32,15 +32,10 @@ export function StartButtons() {
   const { create, busy, error } = useCreateRoom();
   return (
     <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
-        <button className="btn solid" onClick={() => create("friends")} disabled={busy !== null}>
-          <span aria-hidden style={{ width: 0, height: 0, borderStyle: "solid", borderWidth: "6px 0 6px 10px", borderColor: "transparent transparent transparent var(--ink)" }} />
-          {busy === "friends" ? "Setting up…" : "Start a game"}
-        </button>
-        <button className="btn ghost" onClick={() => create("team_safe")} disabled={busy !== null}>
-          {busy === "team_safe" ? "Setting up…" : "Play with your team"}
-        </button>
-      </div>
+      <button className="btn solid" onClick={() => create("friends")} disabled={busy !== null}>
+        <span aria-hidden style={{ width: 0, height: 0, borderStyle: "solid", borderWidth: "6px 0 6px 10px", borderColor: "transparent transparent transparent var(--ink)" }} />
+        {busy === "friends" ? "Setting up…" : "Start a game"}
+      </button>
       {error && <p className="small" style={{ marginTop: 12, color: "var(--good)" }}>{error}</p>}
     </div>
   );
