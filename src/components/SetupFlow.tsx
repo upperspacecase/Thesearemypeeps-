@@ -170,10 +170,11 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
           <button className="btn paperline" onClick={copy}>{copied ? "Copied — paste it to them" : "Copy invite"}</button>
         </div>
         {snap.room.joinCode && (
-          <p className="paper-p small-note">
-            Can&rsquo;t share the link? They can enter code <strong className="code">{snap.room.joinCode}</strong> under
-            &ldquo;Join a game&rdquo;.
-          </p>
+          <div className="code-block">
+            <p className="code-label">Or read them this code</p>
+            <p className="code-big">{snap.room.joinCode}</p>
+            <p className="code-note">They tap &ldquo;Join a game&rdquo; and type it in.</p>
+          </div>
         )}
         <button className="paper-skip" onClick={doneInviting}>I&rsquo;ll build my board first →</button>
       </>
@@ -285,7 +286,7 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
       {isHost && !opp && invited && cards.length > 0 && !bothReady && (
         <p className="paper-float-invite">
           Waiting for your person — <button onClick={share}>invite again</button>
-          {snap.room.joinCode && <> or code <strong className="code">{snap.room.joinCode}</strong></>}
+          {snap.room.joinCode && <> or read them code <strong className="code">{snap.room.joinCode}</strong></>}
         </p>
       )}
     </main>
@@ -397,10 +398,14 @@ function LobbyView({
             {bothReady ? `Waiting for ${opp?.name ?? "the host"} to start the game…` : `Waiting for ${opp?.name ?? "your person"} to finish…`}
           </p>
         ))}
-      {!opp && ready && (
-        <button className="btn paperline" style={{ width: "100%", marginTop: 10 }} onClick={onInvite}>
-          Invite your person
-        </button>
+      {!opp && (
+        <div className="code-block" style={{ marginTop: 16 }}>
+          <p className="code-label">They can join with this code</p>
+          <p className="code-big">{snap.room.joinCode ?? "…"}</p>
+          <button className="btn paperline" style={{ width: "100%", marginTop: 12 }} onClick={onInvite}>
+            Send the invite again
+          </button>
+        </div>
       )}
     </>
   );

@@ -33,13 +33,19 @@ export function LandingActions() {
   function join() {
     const raw = link.trim();
     if (!raw) return;
-    const m = raw.match(/\/r\/([A-Za-z0-9_-]+)/);
-    const token = m ? m[1] : raw.replace(/[^A-Za-z0-9_-]/g, "");
-    if (!token) {
-      setError("That doesn't look like an invite link");
+    const fromLink = raw.match(/\/r\/([A-Za-z0-9_-]+)/);
+    const fromRoom = raw.match(/\/room\/([0-9a-fA-F-]{36})/);
+    if (fromRoom) {
+      router.push(`/room/${fromRoom[1]}`);
       return;
     }
-    router.push(`/r/${token}`);
+    const token = fromLink ? fromLink[1] : raw.replace(/[^A-Za-z0-9_-]/g, "");
+    if (!token) {
+      setError("That doesn't look like a code or a link");
+      return;
+    }
+    // codes are read aloud, so accept them in any case
+    router.push(`/r/${token.length <= 8 ? token.toUpperCase() : token}`);
   }
 
   return (
@@ -50,17 +56,26 @@ export function LandingActions() {
       {!joining ? (
         <button className="btn paperline" onClick={() => setJoining(true)}>Join a game</button>
       ) : (
-        <div className="join-row">
-          <input
-            className="join-field"
-            placeholder="Paste your invite link"
-            value={link}
-            autoFocus
-            onChange={(e) => setLink(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && join()}
-            aria-label="Invite link"
-          />
-          <button className="btn ink sm" onClick={join}>Go</button>
+        <div className="join-box">
+          <label className="join-label" htmlFor="join-code">Enter their code</label>
+          <div className="join-row">
+            <input
+              id="join-code"
+              className="join-field code-input"
+              placeholder="ABCD"
+              value={link}
+              autoFocus
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={64}
+              onChange={(e) => setLink(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && join()}
+              aria-label="Room code or invite link"
+            />
+            <button className="btn ink sm" onClick={join} disabled={!link.trim()}>Go</button>
+          </div>
+          <p className="join-hint">Or paste the link they sent you.</p>
         </div>
       )}
       <button className="btn paperline" onClick={() => setShowHowTo(true)}>How to play</button>

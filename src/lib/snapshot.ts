@@ -95,6 +95,18 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
         )
       : [];
 
+  // Before the reveal a player sees only that they have guessed — never
+  // whether it was right, and never the opponent's guess.
+  const myGuess = round
+    ? await db().get<{ person_card_id: string }>(
+        "SELECT person_card_id FROM guesses WHERE round_id = ? AND player_id = ?",
+        [round.id, viewerId]
+      )
+    : undefined;
+  const oppGuessed = round && opponent
+    ? !!(await db().get("SELECT 1 AS x FROM guesses WHERE round_id = ? AND player_id = ?", [round.id, opponent.user_id]))
+    : false;
+
   const rematchVotes = round
     ? (
         await db().all<{ player_id: string }>("SELECT player_id FROM rematch_requests WHERE round_id = ?", [round.id])
@@ -133,6 +145,7 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
       cards: myCards.map((c) => toView(c, true)),
       secretCardId: mySecret?.person_card_id ?? null,
       eliminatedCardIds: myEliminations,
+      guessedCardId: myGuess?.person_card_id ?? null,
       rematchRequested: rematchVotes.includes(viewerId),
     },
     opponent: opponent
@@ -143,6 +156,7 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
           online: isOnline(opponent),
           deckCount: oppAllCards.length,
           secretCardId: oppSecret?.person_card_id ?? null, // null until reveal
+          hasGuessed: oppGuessed,
           rematchRequested: rematchVotes.includes(opponent.user_id),
         }
       : null,

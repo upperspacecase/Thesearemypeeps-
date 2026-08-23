@@ -95,6 +95,8 @@ export function PlayBoard({ room }: { room: RoomApi }) {
   if (!snap || !snap.round || !snap.opponent) return null;
   const board = snap.board;
   const secretCard = board.find((c) => c.id === snap.me.secretCardId);
+  const iGuessed = !!snap.me.guessedCardId;
+  const myGuessCard = board.find((c) => c.id === snap.me.guessedCardId);
   const zoomCard = board.find((c) => c.id === zoomId);
   const isOut = (id: string) => overrides[id] ?? eliminated.has(id);
   const remaining = board.filter((c) => !isOut(c.id)).length;
@@ -172,7 +174,11 @@ export function PlayBoard({ room }: { room: RoomApi }) {
       <footer className="playfoot">
         <div className="foot-left">
           <button className="howto-btn" onClick={() => setShowHowTo(true)} aria-label="How to play">?</button>
-          <span className="foot-count">{remaining} still standing</span>
+          <span className="foot-count">
+            {iGuessed
+              ? `You guessed ${myGuessCard?.name ?? "someone"} — waiting for ${snap.opponent.name}…`
+              : `${remaining} still standing`}
+          </span>
         </div>
         {secretCard && (
           <button className="secret-corner" onClick={() => openZoom(secretCard.id)} aria-label={`Your pick: ${secretCard.name}. Tap to enlarge`}>
@@ -211,7 +217,20 @@ export function PlayBoard({ room }: { room: RoomApi }) {
               {zoomCard.id === snap.me.secretCardId && <span className="zoom-tag">your pick</span>}
               {isOut(zoomCard.id) && <span className="zoom-tag">removed</span>}
             </p>
-            {!confirmingGuess ? (
+            {iGuessed ? (
+              <div className="zoom-actions">
+                <button
+                  className="btn paperline sm"
+                  onClick={() => {
+                    setOut(zoomCard.id, !isOut(zoomCard.id));
+                    closeZoom();
+                  }}
+                >
+                  {isOut(zoomCard.id) ? "Bring them back" : "It's not this person"}
+                </button>
+                <button className="btn paperline sm" onClick={closeZoom}>Close</button>
+              </div>
+            ) : !confirmingGuess ? (
               <div className="zoom-actions">
                 <button
                   className="btn paperline sm"

@@ -19,7 +19,7 @@ import { randomBytes } from "node:crypto";
 // characters removed so it survives being read out loud.
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function newJoinCode(): string {
-  const bytes = randomBytes(6);
+  const bytes = randomBytes(4);
   let out = "";
   for (const b of bytes) out += CODE_ALPHABET[b % CODE_ALPHABET.length];
   return out;
@@ -497,12 +497,15 @@ export async function setElimination(userId: string, roomId: string, cardId: str
 export async function submitGuess(userId: string, roomId: string, cardId: string) {
   await getRoom(roomId);
   await getMembership(roomId, userId);
-  // Either player may guess at any moment — the conversation lives off-app,
-  // so the app never gates it. A wrong guess still loses the round.
+  // Both players guess. Whoever is ready goes first; the round resolves once
+  // the second guess lands, so nobody is cut off by the other's mistake.
   const round = await activeRound(roomId);
   const opp = await opponentOf(roomId, userId);
   if (!opp) throw new GameError("No opponent yet", 409);
   if (!(await cardInRoom(roomId, cardId))) throw new GameError("Guess a person from this board", 403);
+
+  const already = await db().get("SELECT 1 AS x FROM guesses WHERE round_id = ? AND player_id = ?", [round.id, userId]);
+  if (already) throw new GameError("You have already guessed this round", 409);
 
   const secret = await db().get<{ person_card_id: string }>(
     "SELECT person_card_id FROM round_secrets WHERE round_id = ? AND owner_id = ?",
@@ -511,23 +514,34 @@ export async function submitGuess(userId: string, roomId: string, cardId: string
   if (!secret) throw new GameError("The opponent has no secret set", 409);
 
   const correct = secret.person_card_id === cardId;
-  const winner = correct ? userId : opp.user_id; // wrong guess loses the round (§5.2)
-  await db().tx(async (x) => {
-    await x.run(
-      "INSERT INTO guesses (id, round_id, player_id, person_card_id, correct, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [randomUUID(), round.id, userId, cardId, correct ? 1 : 0, now()]
-    );
-    await x.run(
-      "UPDATE rounds SET status = 'completed', winner_id = ?, ended_at = ? WHERE id = ?",
-      [winner, now(), round.id]
-    );
-    await x.run("UPDATE rooms SET status = 'completed', updated_at = ? WHERE id = ?", [now(), roomId]);
-  });
-  await bumpExpiry(roomId);
+  await db().run(
+    "INSERT INTO guesses (id, round_id, player_id, person_card_id, correct, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    [randomUUID(), round.id, userId, cardId, correct ? 1 : 0, now()]
+  );
   track("guess_submitted", { roomId });
-  track("round_completed", { roomId });
-  publish(roomId, { type: "guess.resolved", correct });
-  publish(roomId, { type: "round.completed" });
+
+  const all = await db().all<{ player_id: string; correct: number }>(
+    "SELECT player_id, correct FROM guesses WHERE round_id = ?",
+    [round.id]
+  );
+  if (all.length >= 2) {
+    // Exactly one right wins it; both right or both wrong is a draw.
+    const rights = all.filter((g) => asInt(g.correct) === 1);
+    const winner = rights.length === 1 ? rights[0].player_id : null;
+    await db().tx(async (x) => {
+      await x.run("UPDATE rounds SET status = 'completed', winner_id = ?, ended_at = ? WHERE id = ?", [
+        winner,
+        now(),
+        round.id,
+      ]);
+      await x.run("UPDATE rooms SET status = 'completed', updated_at = ? WHERE id = ?", [now(), roomId]);
+    });
+    track("round_completed", { roomId });
+    publish(roomId, { type: "round.completed" });
+  } else {
+    publish(roomId, { type: "guess.submitted" });
+  }
+  await bumpExpiry(roomId);
 }
 
 export async function requestRematch(userId: string, roomId: string) {

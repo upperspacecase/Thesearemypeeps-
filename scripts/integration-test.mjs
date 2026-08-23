@@ -82,7 +82,7 @@ console.log("— create & share");
 const created = await A.req("/api/rooms", { json: { displayName: "Ada", promptPolicy: "friends" } });
 ok(created.status === 200 && created.data.roomId && created.data.inviteToken, "host creates a room without an account");
 const { roomId, inviteToken, joinCode } = created.data;
-ok(typeof joinCode === "string" && joinCode.length >= 4, "room comes with a short join code");
+ok(typeof joinCode === "string" && joinCode.length === 4, "room comes with a 4-character join code");
 
 const peek = await B.req(`/api/join?token=${inviteToken}`);
 ok(peek.status === 200 && peek.data.hostName === "Ada", "invite preview shows host name only");
@@ -196,16 +196,30 @@ const bogusElim = await A.action(roomId, { type: "set_elimination", cardId: cryp
 ok(bogusElim.status === 403 || bogusElim.status === 404, "cannot flip a card that is not on this board");
 
 console.log("— guess & reveal");
-// B guesses whenever they like — no turn to wait for. Wrong on purpose:
-// B hunts A's secret (aSecret); pick any other card.
+// Both players guess; the round resolves on the second one. B hunts A's
+// secret (aSecret) and gets it right; A guesses wrong on purpose.
 const board = (await B.snapshot(roomId)).data.board;
 const wrongCard = board.find((c) => c.id !== aSecret && c.id !== bSecret).id;
-const guess = await B.action(roomId, { type: "submit_guess", cardId: wrongCard });
-ok(guess.status === 200, "either player can guess at any time — no turns");
+
+const g1 = await B.action(roomId, { type: "submit_guess", cardId: aSecret });
+ok(g1.status === 200, "first player guesses");
+ok(g1.data.snapshot.room.status === "active", "one guess does not end the round");
+ok(g1.data.snapshot.me.guessedCardId === aSecret, "you can see your own guess");
+const dup = await B.action(roomId, { type: "submit_guess", cardId: wrongCard });
+ok(dup.status === 409, "a player cannot guess twice");
+const midA = (await A.snapshot(roomId)).data;
+ok(midA.opponent.hasGuessed === true, "the other player is told a guess has landed");
+ok(!JSON.stringify(midA.round.guesses).includes(aSecret), "but not what it was");
+
+const g2 = await A.action(roomId, { type: "submit_guess", cardId: wrongCard });
+ok(g2.status === 200, "second player guesses");
 snapA = (await A.snapshot(roomId)).data;
 snapB = (await B.snapshot(roomId)).data;
-ok(snapA.room.status === "completed" && snapB.room.status === "completed", "wrong guess completes the round on both clients");
-ok(snapB.round.winnerId === snapB.opponent.id && snapA.round.winnerId === snapA.me.id, "wrong guess awards the round to the opponent");
+ok(snapA.room.status === "completed" && snapB.room.status === "completed", "second guess completes the round");
+ok(snapB.round.winnerId === snapB.me.id, "the player who guessed right wins");
+ok(snapA.round.guesses.length === 2, "both guesses are revealed");
+ok(snapA.round.guesses.find((g) => g.playerId === snapB.me.id).correct === true, "right guess marked correct");
+ok(snapA.round.guesses.find((g) => g.playerId === snapA.me.id).correct === false, "wrong guess marked wrong");
 ok(snapA.opponent.secretCardId === bSecret || snapB.opponent.secretCardId === aSecret, "secrets revealed after completion");
 const postMutation = await A.action(roomId, { type: "set_elimination", cardId: targetCard, eliminated: false });
 ok(postMutation.status === 409, "completed round rejects new gameplay mutations");

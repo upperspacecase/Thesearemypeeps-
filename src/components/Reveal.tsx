@@ -1,86 +1,101 @@
 "use client";
 
-import { useState } from "react";
 import type { RoomApi } from "@/lib/useRoom";
+
+function Trophy() {
+  return (
+    <svg className="outcome-icon" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M7 4h10v5a5 5 0 0 1-10 0V4Z M7 5H4.5A2.5 2.5 0 0 0 7 9.5 M17 5h2.5A2.5 2.5 0 0 1 17 9.5 M12 14v3 M8.5 20h7 M9.5 20c0-1.7 1.1-3 2.5-3s2.5 1.3 2.5 3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function Cross() {
+  return (
+    <svg className="outcome-icon" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export function Reveal({ room }: { room: RoomApi }) {
   const { snap, action } = room;
-  const [outcomeSent, setOutcomeSent] = useState(false);
   if (!snap || !snap.round || !snap.opponent) return null;
   const round = snap.round;
   const opp = snap.opponent;
-  const iWon = round.winnerId === snap.me.id;
   const board = snap.board;
+
   const mySecret = board.find((c) => c.id === snap.me.secretCardId);
   const theirSecret = board.find((c) => c.id === opp.secretCardId);
-  const finalGuess = round.guesses[round.guesses.length - 1];
-  const guessedCard = finalGuess && board.find((c) => c.id === finalGuess.cardId);
+  const myGuess = round.guesses.find((g) => g.playerId === snap.me.id);
+  const theirGuess = round.guesses.find((g) => g.playerId === opp.id);
+  const iGotIt = !!myGuess?.correct;
+  const theyGotIt = !!theirGuess?.correct;
+
+  const headline = iGotIt
+    ? theyGotIt
+      ? "You both found them."
+      : "You found them."
+    : theyGotIt
+      ? `${opp.name} found them.`
+      : "Neither of you found them.";
+
+  const nameOf = (id?: string) => board.find((c) => c.id === id)?.name ?? "someone";
 
   return (
     <main className="paper paper-page">
       <section className="paper-panel fade-in">
         <p className="eyebrow">Round {round.number} · the reveal</p>
-        <h1 className="paper-h" style={{ fontSize: "clamp(30px,5vw,42px)", marginBottom: 6 }}>
-          {iWon ? "You found them." : `${opp.name} found yours first.`}
-        </h1>
-        {finalGuess && guessedCard && (
-          <p className="paper-p small" style={{ marginBottom: 26 }}>
-            {finalGuess.playerId === snap.me.id ? "You" : opp.name} guessed {guessedCard.name} —{" "}
-            {finalGuess.correct ? "right" : "wrong, which ends the round"}.
-          </p>
-        )}
+        <h1 className="paper-h">{headline}</h1>
 
-        <div style={{ display: "flex", gap: 24, justifyContent: "center", flexWrap: "wrap", margin: "10px 0 8px" }}>
+        <div className="outcomes">
+          <div className={`outcome ${iGotIt ? "win" : "miss"}`}>
+            {iGotIt ? <Trophy /> : <Cross />}
+            <span className="outcome-who">You</span>
+            <span className="outcome-what">guessed {nameOf(myGuess?.cardId)}</span>
+          </div>
+          <div className={`outcome ${theyGotIt ? "win" : "miss"}`}>
+            {theyGotIt ? <Trophy /> : <Cross />}
+            <span className="outcome-who">{opp.name}</span>
+            <span className="outcome-what">guessed {nameOf(theirGuess?.cardId)}</span>
+          </div>
+        </div>
+
+        <p className="reveal-label">The people you each picked</p>
+        <div className="reveal-cards">
           {theirSecret && (
-            <figure className="pcard win" style={{ width: 180, transform: "rotate(-2deg)" }}>
+            <figure className="pcard" style={{ width: 150, transform: "rotate(-2deg)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={theirSecret.imageUrl} alt={`Photo of ${theirSecret.name}`} />
               <figcaption className="nm">{theirSecret.name}</figcaption>
-              <p className="serif-q" style={{ color: "var(--orange)", fontSize: 14, padding: "0 4px 6px" }}>
-                {opp.name}&rsquo;s pick
-              </p>
+              <p className="serif-q reveal-owner">{opp.name}&rsquo;s pick</p>
             </figure>
           )}
           {mySecret && (
-            <figure className="pcard" style={{ width: 180, transform: "rotate(2deg)" }}>
+            <figure className="pcard" style={{ width: 150, transform: "rotate(2deg)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={mySecret.imageUrl} alt={`Photo of ${mySecret.name}`} />
               <figcaption className="nm">{mySecret.name}</figcaption>
-              <p className="serif-q" style={{ color: "var(--orange)", fontSize: 14, padding: "0 4px 6px" }}>
-                your pick
-              </p>
+              <p className="serif-q reveal-owner">your pick</p>
             </figure>
           )}
         </div>
 
-        <p className="serif-q" style={{ fontSize: "clamp(19px,3vw,24px)", margin: "22px auto 4px", maxWidth: "30ch" }}>
-          &ldquo;What should I know about this person?&rdquo;
-        </p>
-        <p className="small dim" style={{ marginBottom: 28 }}>Ask each other — out loud. That part stays between you.</p>
-
-        {!outcomeSent ? (
-          <div style={{ marginBottom: 26 }}>
-            <p className="small dim" style={{ marginBottom: 10 }}>Did you learn something you didn&rsquo;t know?</p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button className="btn paperline sm" onClick={() => { action({ type: "report_outcome", learned: true }); setOutcomeSent(true); }}>Yes, I did</button>
-              <button className="btn paperline sm" onClick={() => { action({ type: "report_outcome", learned: false }); setOutcomeSent(true); }}>Not this time</button>
-            </div>
-          </div>
-        ) : (
-          <p className="small dim" style={{ marginBottom: 26 }}>Thanks — that helps us make the game better.</p>
-        )}
-
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 26 }}>
           <button className="btn ink" onClick={() => action({ type: "request_rematch" })} disabled={snap.me.rematchRequested}>
             {snap.me.rematchRequested
               ? opp.rematchRequested
                 ? "Starting…"
                 : `Waiting for ${opp.name}…`
               : opp.rematchRequested
-                ? `${opp.name} wants a rematch — accept`
-                : "Rematch"}
+                ? `${opp.name} wants to go again — yes`
+                : "Again?"}
           </button>
-          <a className="btn paperline" href="/">Share a new room</a>
           <button
             className="btn danger"
             onClick={() => {
@@ -92,10 +107,9 @@ export function Reveal({ room }: { room: RoomApi }) {
             Delete my deck now
           </button>
         </div>
-        <p className="small dim" style={{ marginTop: 20 }}>
+        <p className="small dim" style={{ marginTop: 18 }}>
           Everything in this room deletes itself within 24 hours either way.
         </p>
-
       </section>
     </main>
   );
