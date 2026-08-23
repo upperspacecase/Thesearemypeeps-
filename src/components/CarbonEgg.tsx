@@ -15,9 +15,9 @@ export function CarbonEgg() {
       <p className={`carbon-reveal serif-q ${found ? "on" : ""}`} aria-live="polite">
         {found && (
           <>
-            We are carbon-based lifeforms.
+            Carbon-based life forms
             <br />
-            We do better in good company.
+            do better in good company.
           </>
         )}
       </p>
