@@ -20,7 +20,6 @@ export default function Home() {
 
           <p className="paper-meta"><strong>2 players &middot; 5&ndash;15 photos each</strong></p>
           <p className="paper-meta">About 20 minutes</p>
-          <p className="paper-tag serif-q">The cards are your people.</p>
         </div>
         <footer className="paper-foot">
           One private link. No download. Photos delete themselves after the game &middot; <a href="/privacy">privacy</a>

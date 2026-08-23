@@ -239,7 +239,7 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
           <span className="bigpick-plus" aria-hidden>+</span>
           <strong>{uploading > 0 ? `Uploading ${uploading}…` : "Pick your photos"}</strong>
         </button>
-        <p className="paper-p small-note">Only adults whose photos you have permission to share. Photos are cropped on your phone and deleted after the game.</p>
+        <p className="paper-p small-note">Photos are cropped on your phone and deleted after the game.</p>
       </>
     );
   } else if (currentCard && !ready) {
@@ -356,31 +356,36 @@ function LobbyView({
   const bothReady = !!(ready && opp?.ready);
 
   const oppStatus = !opp
-    ? "Waiting for them to tap your invite"
+    ? "Hasn't joined yet"
     : opp.ready
       ? "Ready"
       : opp.deckCount === 0
         ? "Just joined"
         : opp.deckCount < min
-          ? `Adding people, ${opp.deckCount} of ${min}`
-          : `Adding people, ${opp.deckCount} added`;
+          ? `${opp.deckCount} of ${min} people`
+          : `${opp.deckCount} people`;
 
   return (
     <>
       <h1 className="paper-h">{ready ? "Ready to play" : "Your board"}</h1>
 
-      <div className="lobby-list">
-        <div className="lobby-row">
-          <span className="who">You</span>
-          <span className={`state ${ready ? "on" : ""}`}>
-            {ready ? "Ready" : enough ? `${cards.length} people` : `Adding people, ${cards.length} of ${min}`}
-          </span>
-        </div>
-        <div className="lobby-row">
-          <span className="who">{opp?.name ?? "Your person"}</span>
-          <span className={`state ${opp?.ready ? "on" : ""}`}>{oppStatus}</span>
-        </div>
+      <div className="seats">
+        <PlayerSeat
+          name={snap.me.name}
+          label="You"
+          ready={ready}
+          present
+          status={ready ? "Ready" : enough ? `${cards.length} people` : `${cards.length} of ${min} people`}
+        />
+        <PlayerSeat
+          name={opp?.name ?? "Your person"}
+          label="Your person"
+          ready={!!opp?.ready}
+          present={!!opp}
+          status={oppStatus}
+        />
       </div>
+      <hr className="seats-rule" />
 
       {!ready && (
         <>
@@ -434,5 +439,25 @@ function LobbyView({
         </div>
       )}
     </>
+  );
+}
+
+// One seat per player, styled like a card so the pair reads as "the two of us"
+// rather than two more people on the board. Readiness is shown, not said:
+// a dashed outline while waiting, a solid green frame and a check once ready.
+function PlayerSeat({ name, label, ready, present, status }: { name: string; label: string; ready: boolean; present: boolean; status: string }) {
+  const initial = present && name.trim() ? name.trim()[0].toUpperCase() : "?";
+  return (
+    <div className={`seat ${ready ? "ready" : present ? "building" : "empty"}`} aria-label={`${label}: ${status}`}>
+      <span className="seat-avatar" aria-hidden>{initial}</span>
+      <span className="seat-label">{label}</span>
+      <strong className="seat-name">{present ? name : "\u2014"}</strong>
+      <span className="seat-status">{status}</span>
+      {ready && (
+        <span className="seat-check" aria-hidden>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.2 3L13 4.5" /></svg>
+        </span>
+      )}
+    </div>
   );
 }
