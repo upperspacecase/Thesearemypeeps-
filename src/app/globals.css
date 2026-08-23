@@ -347,3 +347,7 @@ button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none
 .bigpick-plus { font-size: 44px; line-height: 1; color: var(--blush); }
 .bigpick strong { font-size: clamp(19px, 3vw, 23px); font-weight: 500; letter-spacing: -0.01em; }
 .bigpick-sub { font-size: 14px; color: var(--cream-dim); max-width: 34ch; }
+
+/* photo-as-button in the deck builder (tap to crop) */
+.imgbtn { display: block; width: 100%; padding: 0; border-radius: 9px; cursor: pointer; }
+.imgbtn:focus-visible { outline: 3px solid var(--ember-shadow); outline-offset: 2px; }

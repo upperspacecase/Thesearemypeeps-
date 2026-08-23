@@ -113,6 +113,18 @@ ok(preview.status === 403, "opponent cannot fetch photos before the round starts
 const strangerImg = await C.req(`/api/images/${aCardId}`);
 ok(strangerImg.status === 401 || strangerImg.status === 403, "stranger cannot fetch photos");
 
+// re-crop: the owner can replace a card's photo; the opponent cannot
+{
+  const form = new FormData();
+  form.append("file", new Blob([TINY_JPEG], { type: "image/jpeg" }), "c.jpg");
+  const rep = await A.req(`/api/rooms/${roomId}/cards/${aCardId}`, { form });
+  ok(rep.status === 200, "owner can replace a card's photo (re-crop)");
+  const form2 = new FormData();
+  form2.append("file", new Blob([TINY_JPEG], { type: "image/jpeg" }), "c.jpg");
+  const rep2 = await B.req(`/api/rooms/${roomId}/cards/${aCardId}`, { form: form2 });
+  ok(rep2.status === 403 || rep2.status === 404, "opponent cannot replace someone else's photo");
+}
+
 const badConsent = await A.action(roomId, { type: "mark_ready", consent: false });
 ok(badConsent.status === 400, "readiness requires the consent confirmation");
 const unnamedReady = await A.action(roomId, { type: "mark_ready", consent: true });

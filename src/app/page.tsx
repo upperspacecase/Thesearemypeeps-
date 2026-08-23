@@ -47,7 +47,7 @@ function MiniBoard({ down = [], secret }: { down?: number[]; secret?: number }) 
 }
 
 const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.ReactNode }> = [
-  { title: "Make your board", body: "Pick 5 to 15 people from your camera roll — all at once. Frame each photo and give them a first name.", visual: <MiniBoard /> },
+  { title: "Make your board", body: "Pick 5 to 15 people from your camera roll — all at once. Give each a first name, and tap any photo to adjust its crop.", visual: <MiniBoard /> },
   {
     title: "Choose someone secretly",
     body: "Everyone goes on one shared board — your people and theirs. Pick anyone, even someone they brought. They'll never see who.",

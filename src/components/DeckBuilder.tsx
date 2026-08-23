@@ -39,8 +39,11 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
   const { snap, action, refresh, setError } = room;
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
-  const [queue, setQueue] = useState<File[]>([]);
-  const [queueTotal, setQueueTotal] = useState(0);
+  // Originals stay in browser memory so tapping a photo can re-crop from the
+  // full picture; after a reload the stored card image is used instead.
+  const originals = useRef(new Map<string, File>());
+  const [editing, setEditing] = useState<{ cardId: string; src: string; revoke: boolean; title: string } | null>(null);
+  const [bust, setBust] = useState<Record<string, number>>({});
   const [consent, setConsent] = useState(false);
   const [myName, setMyName] = useState<string | null>(null);
 
@@ -53,67 +56,63 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
   const ready = snap.me.ready;
   const unnamed = cards.filter((c) => !c.name.trim()).length;
 
-  function upload(files: FileList | null) {
+  async function upload(files: FileList | null) {
     if (!files || files.length === 0) return;
     const remaining = max - (snap?.me.cards.length ?? 0);
     const batch = [...files].slice(0, remaining);
-    // Each photo goes through the framing step (drag / pinch-zoom) first.
-    setQueue(batch);
-    setQueueTotal(batch.length);
-  }
-
-  async function uploadBlob(blob: Blob) {
-    try {
-      const form = new FormData();
-      form.append("file", blob, "card.jpg");
-      // No name yet — each photo gets its own name box below it.
-      form.append("name", "");
-      const res = await fetch(`/api/rooms/${roomId}/cards`, { method: "POST", body: form });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? "Upload failed");
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  }
-
-  async function croppedDone(blob: Blob) {
-    setUploading(1);
-    await uploadBlob(blob);
-    setUploading(0);
-    setQueue((q) => q.slice(1));
-    await refresh();
-  }
-
-  async function currentAsIs() {
-    const file = queue[0];
-    if (!file) return;
-    setUploading(1);
-    try {
-      await uploadBlob(await toCardImage(file));
-    } catch (err) {
-      setError((err as Error).message);
-    }
-    setUploading(0);
-    setQueue((q) => q.slice(1));
-    await refresh();
-  }
-
-  async function restAsIs() {
-    const rest = [...queue];
-    setQueue([]);
-    setUploading(rest.length);
-    for (const [i, file] of rest.entries()) {
+    setUploading(batch.length);
+    for (const [i, file] of batch.entries()) {
       try {
-        await uploadBlob(await toCardImage(file));
+        const blob = await toCardImage(file);
+        const form = new FormData();
+        form.append("file", blob, "card.jpg");
+        // No name yet — each photo gets its own name box below it.
+        form.append("name", "");
+        const res = await fetch(`/api/rooms/${roomId}/cards`, { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((data as { error?: string }).error ?? "Upload failed");
+        const cardId = (data as { cardId?: string }).cardId;
+        if (cardId) originals.current.set(cardId, file);
       } catch (err) {
         setError((err as Error).message);
       }
-      setUploading(rest.length - i - 1);
+      setUploading(batch.length - i - 1);
     }
     setUploading(0);
     await refresh();
+  }
+
+  function openCrop(card: { id: string; name: string; imageUrl: string }) {
+    const original = originals.current.get(card.id);
+    setEditing({
+      cardId: card.id,
+      src: original ? URL.createObjectURL(original) : card.imageUrl,
+      revoke: !!original,
+      title: card.name,
+    });
+  }
+
+  function closeCrop() {
+    if (editing?.revoke) URL.revokeObjectURL(editing.src);
+    setEditing(null);
+  }
+
+  async function saveCrop(blob: Blob) {
+    if (!editing) return;
+    try {
+      const form = new FormData();
+      form.append("file", blob, "card.jpg");
+      const res = await fetch(`/api/rooms/${roomId}/cards/${editing.cardId}`, { method: "POST", body: form });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "Could not save the crop");
+      }
+      setBust((b) => ({ ...b, [editing.cardId]: Date.now() }));
+      closeCrop();
+      await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   async function saveName() {
@@ -129,8 +128,8 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         Bring 5 to 15 people from your life
       </h1>
       <p className="dim small" style={{ maxWidth: "52ch", marginBottom: 20 }}>
-        A photo and a first name each. Five gets you playing; more people make the guessing harder. Your opponent
-        sees them only once the round starts.
+        A photo and a first name each — tap a photo any time to adjust its crop. Five gets you playing; more people
+        make the guessing harder. Your opponent sees them only once the round starts.
       </p>
 
       <div style={{ marginBottom: 22, maxWidth: 360 }}>
@@ -168,16 +167,31 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
           <span className="bigpick-plus" aria-hidden>+</span>
           <strong>{uploading > 0 ? "Uploading…" : `Pick your ${min}–${max} photos`}</strong>
           <span className="bigpick-sub">
-            Tap every person you want in the picker — they all come in at once. You&rsquo;ll frame and name each one
-            after.
+            Tap every person you want in the picker — they all come in at once. Name them after, and tap any photo to
+            adjust its crop.
           </span>
         </button>
       ) : (
       <div className="deck-grid" style={{ marginBottom: 24 }}>
         {cards.map((c, i) => (
           <figure key={c.id} className="pcard">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={c.imageUrl} alt={c.name ? `Photo of ${c.name}` : "Photo awaiting a name"} />
+            {ready ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={c.imageUrl} alt={c.name ? `Photo of ${c.name}` : "Photo awaiting a name"} />
+            ) : (
+              <button
+                type="button"
+                className="imgbtn"
+                onClick={() => openCrop(c)}
+                aria-label={`Adjust the crop of ${c.name || "this photo"}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={bust[c.id] ? `${c.imageUrl}?v=${bust[c.id]}` : c.imageUrl}
+                  alt={c.name ? `Photo of ${c.name}` : "Photo awaiting a name"}
+                />
+              </button>
+            )}
             {ready ? (
               <figcaption className="nm">{c.name}</figcaption>
             ) : (
@@ -257,17 +271,7 @@ export function DeckBuilder({ room, roomId }: { room: RoomApi; roomId: string })
         </p>
       )}
 
-      {queue.length > 0 && (
-        <CropModal
-          file={queue[0]}
-          index={queueTotal - queue.length}
-          total={queueTotal}
-          onDone={croppedDone}
-          onUseAsIs={currentAsIs}
-          onRestAsIs={restAsIs}
-          onSkip={() => setQueue((q) => q.slice(1))}
-        />
-      )}
+      {editing && <CropModal src={editing.src} title={editing.title} onSave={saveCrop} onClose={closeCrop} />}
     </section>
   );
 }

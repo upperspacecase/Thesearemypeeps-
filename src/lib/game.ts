@@ -229,6 +229,26 @@ export async function addCard(
   return { id };
 }
 
+/** Swap a card's photo for a re-cropped one. Building phase only. */
+export async function replaceCardImage(
+  userId: string,
+  roomId: string,
+  cardId: string,
+  image: { bytes: Buffer; mime: string }
+) {
+  const room = await getRoom(roomId);
+  await getMembership(roomId, userId);
+  if (!["waiting_for_player", "deck_setup"].includes(room.status))
+    throw new GameError("The deck is locked once the round starts");
+  const deck = await deckFor(roomId, userId);
+  if (!deck) throw new GameError("No deck for this room", 409);
+  if (deck.status === "ready") throw new GameError("Un-ready your deck before editing it");
+  if (!(await cardsOf(deck.id)).some((c) => c.id === cardId))
+    throw new GameError("That card is not in your deck", 404);
+  await db().run("UPDATE card_images SET mime = ?, bytes = ? WHERE card_id = ?", [image.mime, image.bytes, cardId]);
+  publish(roomId, { type: "deck.progress", userId });
+}
+
 export async function removeCard(userId: string, roomId: string, cardId: string) {
   const room = await getRoom(roomId);
   await getMembership(roomId, userId);

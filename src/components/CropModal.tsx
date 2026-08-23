@@ -2,32 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Frame a photo into the 3:4 card at upload time: drag to reposition,
-// pinch or slider to zoom. All on-device — the original file never uploads,
-// only the cropped card (same privacy property as the automatic crop).
+// Re-frame one card's photo: drag to move, pinch or slider to zoom, one
+// button — "Use this crop". Opened by tapping a photo in the deck builder.
+// Cropping happens on-device; only the framed card uploads.
 
 const OUT_W = 480;
 const OUT_H = 640;
 const K = 0.55; // on-screen scale of the crop stage
 
 export function CropModal({
-  file,
-  index,
-  total,
-  onDone,
-  onUseAsIs,
-  onRestAsIs,
-  onSkip,
+  src,
+  title,
+  onSave,
+  onClose,
 }: {
-  file: File;
-  index: number;
-  total: number;
-  onDone: (blob: Blob) => void;
-  onUseAsIs: () => void;
-  onRestAsIs: () => void;
-  onSkip: () => void;
+  src: string;
+  title: string;
+  onSave: (blob: Blob) => void | Promise<void>;
+  onClose: () => void;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -37,14 +30,11 @@ export function CropModal({
   const pinchStart = useRef<{ dist: number; zoom: number } | null>(null);
 
   useEffect(() => {
-    const u = URL.createObjectURL(file);
-    setUrl(u);
     setDims(null);
     setZoom(1);
     setOff({ x: 0, y: 0 });
     setBusy(false);
-    return () => URL.revokeObjectURL(u);
-  }, [file]);
+  }, [src]);
 
   const s0 = dims ? Math.max(OUT_W / dims.w, OUT_H / dims.h) : 1;
   const s = s0 * zoom;
@@ -69,7 +59,7 @@ export function CropModal({
     if (dims) {
       const os = s0 * zoom;
       const ns = s0 * nz;
-      // keep the frame's center point steady while zooming
+      // keep the frame's center steady while zooming
       setOff((o) =>
         clamp({ x: OUT_W / 2 - (OUT_W / 2 - o.x) * (ns / os), y: OUT_H / 2 - (OUT_H / 2 - o.y) * (ns / os) }, ns)
       );
@@ -105,7 +95,7 @@ export function CropModal({
   }
 
   async function save() {
-    if (!url || !dims || !imgRef.current || busy) return;
+    if (!dims || !imgRef.current || busy) return;
     setBusy(true);
     const canvas = document.createElement("canvas");
     canvas.width = OUT_W;
@@ -113,15 +103,15 @@ export function CropModal({
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(imgRef.current, off.x, off.y, dims.w * s, dims.h * s);
     const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
-    if (blob) onDone(blob);
-    else setBusy(false);
+    if (blob) await onSave(blob);
+    setBusy(false);
   }
 
   return (
-    <div className="zoom-backdrop" role="dialog" aria-modal="true" aria-label="Frame this photo">
-      <div className="zoom-card fade-in" style={{ width: "min(360px,100%)" }}>
+    <div className="zoom-backdrop" role="dialog" aria-modal="true" aria-label={`Adjust photo${title ? ` of ${title}` : ""}`} onClick={onClose}>
+      <div className="zoom-card fade-in" style={{ width: "min(360px,100%)" }} onClick={(e) => e.stopPropagation()}>
         <p className="eyebrow" style={{ color: "#8a4a2c", marginBottom: 10 }}>
-          Photo {index + 1} of {total} · drag to move, pinch or slide to zoom
+          {title || "Adjust photo"} · drag to move, pinch or slide to zoom
         </p>
         <div className="crop-stage" style={{ width: OUT_W * K, height: OUT_H * K }}>
           <div
@@ -132,26 +122,24 @@ export function CropModal({
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
-            {url && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                ref={imgRef}
-                src={url}
-                alt="Photo being framed"
-                draggable={false}
-                onLoad={(e) => setDims({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  width: dims?.w,
-                  height: dims?.h,
-                  maxWidth: "none",
-                  transformOrigin: "0 0",
-                  transform: `translate(${off.x}px, ${off.y}px) scale(${s})`,
-                }}
-              />
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={src}
+              alt="Photo being framed"
+              draggable={false}
+              onLoad={(e) => setDims({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: dims?.w,
+                height: dims?.h,
+                maxWidth: "none",
+                transformOrigin: "0 0",
+                transform: `translate(${off.x}px, ${off.y}px) scale(${s})`,
+              }}
+            />
           </div>
         </div>
         <input
@@ -164,14 +152,9 @@ export function CropModal({
           style={{ width: "80%", margin: "14px 0 4px", accentColor: "var(--ember)" }}
         />
         <div className="zoom-actions">
-          <button className="btn solid sm" onClick={save} disabled={!dims || busy}>
-            {busy ? "Adding…" : "Use this crop"}
+          <button className="btn solid" onClick={save} disabled={!dims || busy}>
+            {busy ? "Saving…" : "Use this crop"}
           </button>
-          <button className="btn ghost sm" onClick={onUseAsIs} disabled={busy}>Use as-is</button>
-          {total - index > 1 && (
-            <button className="btn ghost sm" onClick={onRestAsIs} disabled={busy}>Add the rest as-is</button>
-          )}
-          <button className="btn ghost sm" onClick={onSkip} disabled={busy}>Skip photo</button>
         </div>
       </div>
     </div>
