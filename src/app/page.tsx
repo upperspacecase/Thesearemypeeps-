@@ -1,10 +1,16 @@
-import { StartButtons, CtaButton } from "@/components/StartButtons";
+import { StartButtons } from "@/components/StartButtons";
 
-const FACES = [
-  ["#F6B49B", "#A93407"], ["#FFD9BF", "#C63E0B"], ["#EFA07E", "#7C2504"], ["#FFC3A0", "#A93407"],
-  ["#F8C6AC", "#8F2C05"], ["#FFB88E", "#7C2504"], ["#F2AB8A", "#A93407"], ["#FFD2B4", "#B53908"],
-  ["#F6B49B", "#7C2504"], ["#FFC9A6", "#A93407"], ["#EFA985", "#8F2C05"], ["#FFDCC4", "#C63E0B"],
+// Wordle-style splash: what the game is, one button, and a picture of play.
+// The rules live in the game itself (first-run overlay), not on this page.
+
+const FACES: Array<[string, string, string]> = [
+  ["Maya", "#F6B49B", "#A93407"], ["Sam", "#FFD9BF", "#C63E0B"], ["Priya", "#EFA07E", "#7C2504"],
+  ["Jack", "#FFC3A0", "#A93407"], ["Nadia", "#F8C6AC", "#8F2C05"], ["Omar", "#FFB88E", "#7C2504"],
+  ["Elif", "#F2AB8A", "#A93407"], ["Theo", "#FFD2B4", "#B53908"], ["June", "#F6B49B", "#7C2504"],
+  ["Ravi", "#FFC9A6", "#A93407"], ["Kate", "#EFA985", "#8F2C05"], ["Milo", "#FFDCC4", "#C63E0B"],
+  ["Ana", "#F6B49B", "#A93407"], ["Ben", "#FFD9BF", "#C63E0B"], ["Cleo", "#EFA07E", "#7C2504"],
 ];
+const DOWN = new Set([1, 4, 9, 12]);
 
 function Face({ bg, fg }: { bg: string; fg: string }) {
   return (
@@ -16,165 +22,71 @@ function Face({ bg, fg }: { bg: string; fg: string }) {
   );
 }
 
-function MiniBoard({ down = [], secret }: { down?: number[]; secret?: number }) {
+function GameplayMock() {
   return (
-    <div aria-hidden style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, width: "min(400px,100%)" }}>
-      {FACES.map(([bg, fg], i) => {
-        const isDown = down.includes(i);
-        return (
-          <div
-            key={i}
-            style={{
-              aspectRatio: "3/4", borderRadius: 12, background: "var(--cream)", padding: 7, position: "relative",
-              boxShadow: "0 10px 24px -14px rgba(70,20,2,.55)",
-              opacity: isDown ? 0.38 : 1,
-              transform: isDown ? "rotate(-1.5deg) scale(.96)" : undefined,
-              outline: secret === i ? "3px solid var(--glow)" : undefined,
-              outlineOffset: secret === i ? 3 : undefined,
-            }}
-          >
-            <div style={{ position: "absolute", inset: 7, borderRadius: 7, overflow: "hidden", background: isDown ? "var(--ember-shadow)" : undefined }}>
-              {!isDown && <Face bg={bg} fg={fg} />}
-              {isDown && (
-                <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: "var(--serif)", fontSize: 26, color: "rgba(255,246,239,.55)" }}>?</span>
-              )}
-            </div>
+    <div className="phone-mock" aria-label="What a game looks like: a board of faces, some swiped away, and the person you picked in the corner">
+      <div className="pm-board">
+        {FACES.map(([name, bg, fg], i) => (
+          <div key={name} className={`pm-card ${DOWN.has(i) ? "down" : ""}`}>
+            <div className="pm-face">{DOWN.has(i) ? <span className="pm-not">not them</span> : <Face bg={bg} fg={fg} />}</div>
+            <span className="pm-name">{name}</span>
           </div>
-        );
-      })}
+        ))}
+      </div>
+      <div className="pm-foot">
+        <span className="pm-q">?</span>
+        <span className="pm-count">11 still standing</span>
+        <div className="pm-secret">
+          <div className="pm-face"><Face bg="#EFA07E" fg="#7C2504" /></div>
+          <span>you picked</span>
+          <strong>Priya</strong>
+        </div>
+      </div>
     </div>
   );
 }
 
-const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.ReactNode }> = [
-  { title: "Make your board", body: "Pick 5 to 15 people from your camera roll — all at once. Give each a first name, and tap any photo to adjust its crop.", visual: <MiniBoard /> },
-  {
-    title: "Choose someone secretly",
-    body: "Everyone goes on one shared board — your people and theirs. Pick anyone, even someone they brought. They'll never see who.",
-    visual: <MiniBoard secret={2} />,
-  },
-  {
-    title: "Ask out loud",
-    body: "Yes-or-no questions, face to face or on your call. Nothing goes through the app — it just holds the board.",
-    qs: ["Are they wearing glasses?", "Have you known them since school?", "Are they the funniest person you know?", "Would you trust them to get you out of trouble?"],
-    visual: <MiniBoard down={[1, 3, 6, 9]} />,
-  },
-  {
-    title: "Swipe left — it's not this person",
-    body: "Each answer clears the board. Swiped the wrong person? Swipe them again to bring them back. Tap anyone to look closer, and guess from there when you're sure.",
-    visual: <MiniBoard down={[0, 1, 3, 4, 5, 6, 8, 9, 10, 11]} />,
-  },
-];
-
 export default function Home() {
   return (
-    <main>
-      <header
-        style={{
-          position: "relative", minHeight: "100svh", display: "grid", placeItems: "center",
-          padding: "96px 24px 120px", overflow: "hidden",
-          background:
-            "radial-gradient(1100px 700px at 78% 18%, #F0561A 0%, transparent 60%), radial-gradient(900px 900px at 12% 85%, #C63E0B 0%, transparent 55%), var(--ember)",
-        }}
-      >
-        <div className="figure" aria-hidden>
-          <span style={{ width: 520, height: 640, right: "8%", top: "4%", background: "radial-gradient(closest-side,rgba(246,180,155,.55),transparent 72%)" }} />
-          <span style={{ width: 420, height: 560, right: "16%", top: "34%", background: "radial-gradient(closest-side,rgba(255,224,206,.5),transparent 70%)" }} />
-          <span style={{ width: 640, height: 520, left: "-10%", bottom: "-14%", background: "radial-gradient(closest-side,rgba(124,37,4,.55),transparent 72%)" }} />
-        </div>
+    <main
+      style={{
+        position: "relative", minHeight: "100svh", overflow: "hidden",
+        display: "grid", placeItems: "center", padding: "72px 24px 48px",
+        background:
+          "radial-gradient(1100px 700px at 78% 18%, #F0561A 0%, transparent 60%), radial-gradient(900px 900px at 12% 85%, #C63E0B 0%, transparent 55%), var(--ember)",
+      }}
+    >
+      <div className="figure" aria-hidden>
+        <span style={{ width: 520, height: 640, right: "8%", top: "4%", background: "radial-gradient(closest-side,rgba(246,180,155,.55),transparent 72%)" }} />
+        <span style={{ width: 420, height: 560, right: "16%", top: "34%", background: "radial-gradient(closest-side,rgba(255,224,206,.5),transparent 70%)" }} />
+        <span style={{ width: 640, height: 520, left: "-10%", bottom: "-14%", background: "radial-gradient(closest-side,rgba(124,37,4,.55),transparent 72%)" }} />
+      </div>
 
-        <div className="panel" style={{ width: "min(620px,100%)", borderRadius: 40 }}>
-          <h1 className="display" style={{ marginBottom: 24, fontSize: "clamp(28px,4.5vw,40px)" }}>
+      <div className="splash">
+        <div className="panel" style={{ width: "min(560px,100%)", borderRadius: 40 }}>
+          <h1 className="display" style={{ marginBottom: 22, fontSize: "clamp(27px,4.2vw,38px)" }}>
             <strong style={{ color: "var(--cream)", fontWeight: 500 }}>In Good Company</strong> is a two-player guessing
             game made from the real people in your lives.
           </h1>
 
-          <div style={{ display: "grid", gap: 12, margin: "28px 0 6px" }}>
+          <div style={{ display: "grid", gap: 10, margin: "0 0 22px" }}>
             <p className="eyebrow" style={{ marginBottom: 0, color: "var(--cream-dim)", fontSize: 12 }}>You might begin with</p>
-            <p className="serif-q" style={{ fontSize: "clamp(20px,3vw,26px)", lineHeight: 1.25 }}>&ldquo;Are they wearing a hat?&rdquo;</p>
+            <p className="serif-q" style={{ fontSize: "clamp(19px,2.8vw,24px)", lineHeight: 1.25 }}>&ldquo;Are they wearing a hat?&rdquo;</p>
             <p className="eyebrow" style={{ marginBottom: 0, color: "var(--cream-dim)", fontSize: 12 }}>Five minutes later, you&rsquo;re asking</p>
-            <p className="serif-q" style={{ fontSize: "clamp(20px,3vw,26px)", lineHeight: 1.25, color: "var(--good)" }}>
+            <p className="serif-q" style={{ fontSize: "clamp(19px,2.8vw,24px)", lineHeight: 1.25, color: "var(--good)" }}>
               &ldquo;Is this the person you would call when everything went wrong?&rdquo;
             </p>
           </div>
 
-          <p className="dim" style={{ maxWidth: "44ch", margin: "20px 0 26px" }}>
-            You are trying to find one person. Along the way, you discover an entire world.
-          </p>
-
           <StartButtons />
-          <p className="small dim" style={{ marginTop: 20 }}>One private link. No download.</p>
-        </div>
-      </header>
-
-      <section style={{ background: "linear-gradient(180deg,var(--ember) 0%,var(--ember-deep) 12%,var(--ember-deep) 88%,var(--ember) 100%)", padding: "100px 0" }}>
-        <div className="wrap">
-          <p className="eyebrow">Before you play</p>
-          <h2 className="display" style={{ marginBottom: 20 }}>Your people. One secret each.</h2>
-          <dl className="specs" style={{ margin: "38px 0" }}>
-            <div className="spec"><dt>Players</dt><dd>2</dd></div>
-            <div className="spec"><dt>Bring</dt><dd>5–15 photos each</dd></div>
-            <div className="spec"><dt>Setup</dt><dd>About 10 minutes the first time</dd></div>
-            <div className="spec"><dt>Playing time</dt><dd>10–20 minutes per round</dd></div>
-            <div className="spec"><dt>You&rsquo;ll need</dt><dd>One phone or laptop per player</dd></div>
-            <div className="spec"><dt>Play from</dt><dd>The same room or alongside any call</dd></div>
-          </dl>
-          <p className="dim" style={{ maxWidth: "58ch" }}>
-            Choose people from different parts of your life: the friend who knew you before the job title, the cousin who
-            knows the family stories, the former flatmate with evidence, or the person you would call first.
-          </p>
-          <p className="notice" style={{ marginTop: 22 }}>
-            Only include adults whose photos you have permission to share in your private game.
+          <p className="small dim" style={{ marginTop: 18 }}>
+            One private link. No download. Photos delete themselves after the game ·{" "}
+            <a href="/privacy">privacy</a>
           </p>
         </div>
-      </section>
 
-      <section style={{ padding: "100px 0" }}>
-        <div className="wrap">
-          <p className="eyebrow">One question at a time</p>
-          <h2 className="display">How to play</h2>
-          <div style={{ display: "grid", gap: 80, marginTop: 60 }}>
-            {STEPS.map((s, i) => (
-              <div key={s.title} className="step-row">
-                <div>
-                  <p className="serif-q" style={{ fontSize: 19, color: "var(--blush)", marginBottom: 8 }}>
-                    Step {["one", "two", "three", "four", "five"][i]}
-                  </p>
-                  <h3 style={{ fontWeight: 500, fontSize: "clamp(22px,3vw,28px)", lineHeight: 1.2, marginBottom: 10, letterSpacing: "-0.01em" }}>{s.title}</h3>
-                  <p className="dim" style={{ maxWidth: "48ch" }}>{s.body}</p>
-                  {s.qs && (
-                    <ul style={{ marginTop: 14, display: "grid", gap: 6, listStyle: "none" }}>
-                      {s.qs.map((q) => (
-                        <li key={q} className="serif-q" style={{ fontSize: 19, color: "var(--good)" }}>
-                          <span style={{ color: "var(--blush)" }}>— </span>{q}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div style={{ display: "grid", justifyItems: "center" }}>{s.visual}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section
-        style={{
-          padding: "120px 24px 130px", textAlign: "center",
-          background: "radial-gradient(800px 500px at 50% 0%, #F0561A 0%, transparent 65%), var(--ember)",
-        }}
-      >
-        <p className="serif-q" style={{ fontSize: "clamp(19px,2.6vw,24px)", color: "var(--good)", marginBottom: 18 }}>
-          The board gets smaller. Your picture of each other gets bigger.
-        </p>
-        <h2 className="display" style={{ marginBottom: 32 }}>Bring your people. Meet theirs.</h2>
-        <CtaButton />
-      </section>
-
-      <footer style={{ padding: "36px 24px 48px", textAlign: "center", fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--cream-dim)" }}>
-        In Good Company · <a href="/privacy" style={{ textTransform: "none", letterSpacing: 0 }}>Privacy</a>
-      </footer>
+        <GameplayMock />
+      </div>
     </main>
   );
 }
