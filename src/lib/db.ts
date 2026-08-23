@@ -93,7 +93,8 @@ function ddl(dialect: "sqlite" | "pg"): string {
   CREATE TABLE IF NOT EXISTS card_images (
     card_id TEXT PRIMARY KEY REFERENCES person_cards(id) ON DELETE CASCADE,
     mime TEXT NOT NULL,
-    bytes ${BYTES} NOT NULL
+    bytes ${BYTES} NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1
   );
 
   CREATE TABLE IF NOT EXISTS rounds (
@@ -189,10 +190,15 @@ function makeSqlite(): Db {
   const sq = new Database(path.join(dataDir, "igc.sqlite"));
   sq.pragma("journal_mode = WAL");
   sq.pragma("foreign_keys = ON");
-  try {
-    sq.exec("ALTER TABLE rooms ADD COLUMN join_code TEXT");
-  } catch {
-    // column already exists (or table doesn't yet) — ddl below handles fresh DBs
+  for (const migration of [
+    "ALTER TABLE rooms ADD COLUMN join_code TEXT",
+    "ALTER TABLE card_images ADD COLUMN version INTEGER NOT NULL DEFAULT 1",
+  ]) {
+    try {
+      sq.exec(migration);
+    } catch {
+      // already applied, or the table is about to be created by the ddl below
+    }
   }
   sq.exec(ddl("sqlite"));
 
@@ -257,10 +263,15 @@ function makePg(url: string): Db {
     const client = await pool.connect();
     try {
       // Migrations that must land BEFORE the ddl (its index references them).
-      try {
-        await client.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS join_code TEXT");
-      } catch {
-        // table doesn't exist yet — the ddl below creates it with the column
+      for (const migration of [
+        "ALTER TABLE rooms ADD COLUMN IF NOT EXISTS join_code TEXT",
+        "ALTER TABLE card_images ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1",
+      ]) {
+        try {
+          await client.query(migration);
+        } catch {
+          // table doesn't exist yet — the ddl below creates it with the column
+        }
       }
       await client.query(ddl("pg"));
     } finally {

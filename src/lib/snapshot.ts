@@ -36,13 +36,20 @@ export async function buildSnapshot(roomId: string, viewerId: string) {
       userId,
     ]);
 
+  // the image version rides along so a re-crop produces a new URL — otherwise
+  // the person who cropped keeps seeing their own cached copy
   const cardsOf = (deckId: string) =>
-    db().all<PersonCardRow>("SELECT * FROM person_cards WHERE deck_id = ? ORDER BY sort_order", [deckId]);
+    db().all<PersonCardRow & { version: number | null }>(
+      `SELECT pc.*, ci.version FROM person_cards pc
+       LEFT JOIN card_images ci ON ci.card_id = pc.id
+       WHERE pc.deck_id = ? ORDER BY pc.sort_order`,
+      [deckId]
+    );
 
-  const toView = (c: PersonCardRow, mine: boolean): CardView => ({
+  const toView = (c: PersonCardRow & { version?: number | null }, mine: boolean): CardView => ({
     id: c.id,
     name: c.display_name,
-    imageUrl: `/api/images/${c.id}`,
+    imageUrl: `/api/images/${c.id}?v=${asInt(c.version) || 1}`,
     mine,
   });
 

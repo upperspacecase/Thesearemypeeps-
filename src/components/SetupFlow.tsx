@@ -16,7 +16,6 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
   const [uploading, setUploading] = useState(0);
   const originals = useRef(new Map<string, File>());
   const [editing, setEditing] = useState<{ cardId: string; src: string; revoke: boolean; title: string } | null>(null);
-  const [bust, setBust] = useState<Record<string, number>>({});
   const [invited, setInvited] = useState<boolean>(() => {
     try {
       return sessionStorage.getItem(`igc_invited_${roomId}`) === "1";
@@ -54,7 +53,7 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
   // The message that lands in their chat. Says what it is, what to bring, and
   // that we need to be together for it — the part people actually ask about.
   const inviteText =
-    "Wanna test a game with me? It's called In Good Company — you bring 5–15 photos of people in your life, I do the same, and we try to guess who the other picked. We'd need about 20 minutes together on a call or in person.";
+    "Wanna test a game with me? It's called In Good Company. You bring 5 to 15 photos of people in your life, I do the same, and we try to guess who the other picked. We'd need about 20 minutes together on a call or in person.";
 
   function doneInviting() {
     setInvited(true);
@@ -139,7 +138,6 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
         const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? "Could not save the crop");
       }
-      setBust((b) => ({ ...b, [editing.cardId]: Date.now() }));
       closeCrop();
       await refresh();
     } catch (err) {
@@ -162,12 +160,12 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
       <>
         <h1 className="paper-h">Invite your person</h1>
         <p className="paper-p">
-          They&rsquo;ll get a message explaining the game — bring 5&ndash;15 photos, guess who the other picked, about
+          They&rsquo;ll get a message explaining the game: bring 5 to 15 photos, guess who the other picked, about
           20 minutes together on a call or in person.
         </p>
         <div className="landing-actions" style={{ margin: "22px auto 8px" }}>
           <button className="btn ink" onClick={share}>Invite your person</button>
-          <button className="btn paperline" onClick={copy}>{copied ? "Copied — paste it to them" : "Copy invite"}</button>
+          <button className="btn paperline" onClick={copy}>{copied ? "Copied, paste it to them" : "Copy invite"}</button>
         </div>
         {snap.room.joinCode && (
           <div className="code-block">
@@ -183,7 +181,7 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
     // 2. your name — one field
     body = (
       <>
-        <h1 className="paper-h">First — your name</h1>
+        <h1 className="paper-h">First, your name</h1>
         <p className="paper-p">Just so {opp?.name ?? "the other player"} knows who they&rsquo;re playing.</p>
         <div className="wizard-box">
           <input
@@ -206,7 +204,7 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
     body = (
       <>
         <h1 className="paper-h">Bring your people</h1>
-        <p className="paper-p">Pick 5 to 15 photos from your camera roll — tap several at once in the picker. You&rsquo;ll name each person next.</p>
+        <p className="paper-p">Pick 5 to 15 photos from your camera roll, tapping several at once in the picker. You&rsquo;ll name each person next.</p>
         <button className="bigpick onpaper" onClick={() => fileInput.current?.click()} disabled={uploading > 0}>
           <span className="bigpick-plus" aria-hidden>+</span>
           <strong>{uploading > 0 ? `Uploading ${uploading}…` : "Pick your photos"}</strong>
@@ -225,7 +223,7 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             className="wizard-photo"
-            src={bust[currentCard.id] ? `${currentCard.imageUrl}?v=${bust[currentCard.id]}` : currentCard.imageUrl}
+            src={currentCard.imageUrl}
             alt="Person to name"
           />
           <button className="paper-skip" onClick={() => openCrop(currentCard)}>Adjust crop</button>
@@ -255,7 +253,6 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
         room={room}
         roomId={roomId}
         openCrop={openCrop}
-        bust={bust}
         onAddMore={() => fileInput.current?.click()}
         onInvite={share}
         uploading={uploading}
@@ -285,7 +282,7 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
       {editing && <CropModal src={editing.src} title={editing.title} onSave={saveCrop} onClose={closeCrop} />}
       {isHost && !opp && invited && cards.length > 0 && !bothReady && (
         <p className="paper-float-invite">
-          Waiting for your person — <button onClick={share}>invite again</button>
+          Waiting for your person. <button onClick={share}>Invite again</button>
           {snap.room.joinCode && <> or read them code <strong className="code">{snap.room.joinCode}</strong></>}
         </p>
       )}
@@ -297,7 +294,6 @@ function LobbyView({
   room,
   roomId,
   openCrop,
-  bust,
   onAddMore,
   onInvite,
   uploading,
@@ -305,7 +301,6 @@ function LobbyView({
   room: RoomApi;
   roomId: string;
   openCrop: (c: { id: string; name: string; imageUrl: string }) => void;
-  bust: Record<string, number>;
   onAddMore: () => void;
   onInvite: () => void;
   uploading: number;
@@ -356,7 +351,7 @@ function LobbyView({
               <figure key={c.id} className="pcard">
                 <button type="button" className="imgbtn" onClick={() => openCrop(c)} aria-label={`Adjust ${c.name}'s photo`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={bust[c.id] ? `${c.imageUrl}?v=${bust[c.id]}` : c.imageUrl} alt={`Photo of ${c.name}`} />
+                  <img src={c.imageUrl} alt={`Photo of ${c.name}`} />
                 </button>
                 <figcaption className="nm">{c.name}</figcaption>
                 <div className="deck-tools">

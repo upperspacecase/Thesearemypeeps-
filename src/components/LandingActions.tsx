@@ -89,9 +89,10 @@ export function LandingActions() {
             <p className="howto-sub">Find the person they picked. The talking is up to you.</p>
             <ul>
               <li>You each bring 5–15 photos of your people. Everyone lands on one shared board.</li>
-              <li>Each of you secretly picks one person — anyone on the board.</li>
-              <li>Ask yes-or-no questions <strong>out loud</strong> — nothing goes through the app.</li>
-              <li><span className="mech-arrow" aria-hidden>←</span> Swipe a card left when it&rsquo;s not them. Tap anyone to look closer, and guess when you&rsquo;re sure.</li>
+              <li>Each of you secretly picks one person, anyone on the board.</li>
+              <li>Ask yes-or-no questions <strong>out loud</strong>. Nothing goes through the app.</li>
+              <li>Flick a card away in any direction when it&rsquo;s not them. Flick it again to bring them back.</li>
+              <li>Tap anyone to look closer, and guess when you&rsquo;re sure.</li>
             </ul>
             <button className="btn solid" onClick={() => setShowHowTo(false)} style={{ marginTop: 6 }}>Got it</button>
           </div>

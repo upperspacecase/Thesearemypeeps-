@@ -294,7 +294,11 @@ export async function replaceCardImage(
   if (deck.status === "ready") throw new GameError("Un-ready your deck before editing it");
   if (!(await cardsOf(deck.id)).some((c) => c.id === cardId))
     throw new GameError("That card is not in your deck", 404);
-  await db().run("UPDATE card_images SET mime = ?, bytes = ? WHERE card_id = ?", [image.mime, image.bytes, cardId]);
+  await db().run("UPDATE card_images SET mime = ?, bytes = ?, version = version + 1 WHERE card_id = ?", [
+    image.mime,
+    image.bytes,
+    cardId,
+  ]);
   publish(roomId, { type: "deck.progress", userId });
 }
 

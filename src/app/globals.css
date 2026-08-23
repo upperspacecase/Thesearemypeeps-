@@ -175,6 +175,7 @@ label.lbl {
 }
 button.pcard:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 button.pcard { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.fitgrid button.pcard { touch-action: none; }
 .pcard.down { opacity: 0.55; transform: rotate(-1.5deg) scale(0.96); }
 .pcard.down img { filter: grayscale(0.85) contrast(0.85); }
 .pcard.down::after {

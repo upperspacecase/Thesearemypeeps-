@@ -39,7 +39,7 @@ export default function ErrorBoundary({ error, reset }: { error: Error & { diges
         <p className="eyebrow">In Good Company</p>
         <h1 className="display" style={{ fontSize: 30, marginBottom: 12 }}>Something hiccuped</h1>
         <p className="dim small" style={{ marginBottom: 6 }}>
-          Your game is safe on the server — reloading almost always picks it right back up.
+          Your game is safe on the server. Reloading almost always picks it right back up.
         </p>
         <p className="small" style={{ color: "var(--good)", wordBreak: "break-word", marginBottom: 20 }}>
           {String(error?.message ?? "Unknown error").slice(0, 300)}

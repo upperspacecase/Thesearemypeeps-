@@ -93,7 +93,7 @@ export function Reveal({ room }: { room: RoomApi }) {
                 ? "Starting…"
                 : `Waiting for ${opp.name}…`
               : opp.rematchRequested
-                ? `${opp.name} wants to go again — yes`
+                ? `${opp.name} wants to go again. Yes`
                 : "Again?"}
           </button>
           <button

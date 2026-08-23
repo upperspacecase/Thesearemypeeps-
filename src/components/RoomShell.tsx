@@ -39,7 +39,7 @@ export function RoomShell({ roomId }: { roomId: string }) {
           <p className="eyebrow">In Good Company</p>
           <h1 className="display" style={{ fontSize: 30, marginBottom: 12 }}>This room isn&rsquo;t yours to see</h1>
           <p className="dim">
-            Rooms are private to their two players. If someone invited you, open their invite link — it&rsquo;s the only
+            Rooms are private to their two players. If someone invited you, open their invite link. It&rsquo;s the only
             door in.
           </p>
           <a className="btn ink" href="/" style={{ marginTop: 24 }}>Go home</a>

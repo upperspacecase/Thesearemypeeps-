@@ -10,13 +10,15 @@ import type { RoomApi } from "@/lib/useRoom";
 //   zoom view   = remove / bring back / lock in your guess
 // The whole board fits on one screen; your own pick sits larger in a corner.
 
-const SWIPE_THRESHOLD = 60;
+const SWIPE_THRESHOLD = 60; // distance in any direction that discards a card
 const LABEL_THRESHOLD = 24;
 
 interface Drag {
   id: string;
   startX: number;
+  startY: number;
   dx: number;
+  dy: number;
   moved: boolean;
 }
 
@@ -118,21 +120,23 @@ export function PlayBoard({ room }: { room: RoomApi }) {
 
   function pointerDown(e: React.PointerEvent, id: string) {
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    setDrag({ id, startX: e.clientX, dx: 0, moved: false });
+    setDrag({ id, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0, moved: false });
   }
   function pointerMove(e: React.PointerEvent, id: string) {
     setDrag((d) => {
       if (!d || d.id !== id) return d;
-      // Only leftward drag moves the card — swiping is for removing people.
-      const dx = Math.min(0, e.clientX - d.startX);
-      return { ...d, dx, moved: d.moved || Math.abs(e.clientX - d.startX) > 6 };
+      // The card follows the finger whichever way it goes.
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      return { ...d, dx, dy, moved: d.moved || Math.hypot(dx, dy) > 6 };
     });
   }
   function pointerEnd(id: string) {
     const d = dragRef.current;
     setDrag(null);
     if (!d || d.id !== id) return;
-    if (d.dx <= -SWIPE_THRESHOLD) setOut(id, !isOut(id)); // swipe toggles: a second swipe brings them back
+    // Flick it away in any direction to discard; a second flick brings it back.
+    if (Math.hypot(d.dx, d.dy) >= SWIPE_THRESHOLD) setOut(id, !isOut(id));
     else if (!d.moved) openZoom(id); // tap: look closer
   }
 
@@ -146,12 +150,17 @@ export function PlayBoard({ room }: { room: RoomApi }) {
           {board.map((c) => {
             const dragging = drag?.id === c.id;
             const dx = dragging ? drag!.dx : 0;
-            const showLabel = dragging && dx < -LABEL_THRESHOLD;
+            const dy = dragging ? drag!.dy : 0;
+            const showLabel = dragging && Math.hypot(dx, dy) > LABEL_THRESHOLD;
             return (
               <button
                 key={c.id}
                 className={`pcard fit ${isOut(c.id) ? "down" : ""} ${dragging ? "dragging" : ""}`}
-                style={dragging && dx !== 0 ? { transform: `translateX(${dx}px) rotate(${dx / 22}deg)`, opacity: 1 } : undefined}
+                style={
+                  dragging && (dx !== 0 || dy !== 0)
+                    ? { transform: `translate(${dx}px, ${dy}px) rotate(${dx / 22}deg)`, opacity: 1 }
+                    : undefined
+                }
                 onPointerDown={(e) => pointerDown(e, c.id)}
                 onPointerMove={(e) => pointerMove(e, c.id)}
                 onPointerUp={() => pointerEnd(c.id)}
@@ -159,7 +168,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
                 onClick={(e) => {
                   if (e.detail === 0) openZoom(c.id); // keyboard activation
                 }}
-                aria-label={`${c.name || "Unnamed"} — ${isOut(c.id) ? "removed" : "standing"}. Tap to look closer`}
+                aria-label={`${c.name || "Unnamed"}, ${isOut(c.id) ? "removed" : "standing"}. Tap to look closer`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={c.imageUrl} alt={`Photo of ${c.name}`} draggable={false} />
@@ -176,7 +185,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
           <button className="howto-btn" onClick={() => setShowHowTo(true)} aria-label="How to play">?</button>
           <span className="foot-count">
             {iGuessed
-              ? `You guessed ${myGuessCard?.name ?? "someone"} — waiting for ${snap.opponent.name}…`
+              ? `You guessed ${myGuessCard?.name ?? "someone"}. Waiting for ${snap.opponent.name}…`
               : `${remaining} still standing`}
           </span>
         </div>
@@ -197,9 +206,9 @@ export function PlayBoard({ room }: { room: RoomApi }) {
             <h2>How to play</h2>
             <p className="howto-sub">Find the person they picked. The talking is up to you.</p>
             <ul>
-              <li>Ask yes-or-no questions <strong>out loud</strong> — nothing goes through the app.</li>
-              <li><span className="mech-arrow" aria-hidden>←</span> Swipe a card left when it&rsquo;s not them. Swipe again to bring them back.</li>
-              <li>Tap anyone to look closer — and guess from there when you&rsquo;re sure.</li>
+              <li>Ask yes-or-no questions <strong>out loud</strong>. Nothing goes through the app.</li>
+              <li>Flick a card away in any direction when it&rsquo;s not them. Flick it again to bring them back.</li>
+              <li>Tap anyone to look closer, and guess from there when you&rsquo;re sure.</li>
               <li>A wrong guess loses the round.</li>
             </ul>
             <button className="btn ink" onClick={closeHowTo} style={{ marginTop: 6 }}>Got it</button>
@@ -249,7 +258,7 @@ export function PlayBoard({ room }: { room: RoomApi }) {
             ) : (
               <div className="zoom-actions">
                 <p className="small" style={{ width: "100%", color: "var(--ink)", opacity: 0.75 }}>
-                  A wrong guess ends the round — and loses it. Sure?
+                  A wrong guess loses the round. Sure?
                 </p>
                 <button className="btn ink sm" onClick={() => action({ type: "submit_guess", cardId: zoomCard.id })}>
                   Lock in {zoomCard.name}

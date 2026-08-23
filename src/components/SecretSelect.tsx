@@ -19,7 +19,7 @@ export function SecretSelect({ room }: { room: RoomApi }) {
           Choose someone secretly
         </h1>
         <p className="paper-p" style={{ marginBottom: 22 }}>
-          Everyone is on one board — your people and {snap.opponent?.name ?? "theirs"}&rsquo;s. Pick anyone.{" "}
+          Everyone is on one board: your people and {snap.opponent?.name ?? "theirs"}&rsquo;s. Pick anyone.{" "}
           {snap.opponent?.name ?? "The other player"} will see the whole board too, but never who you chose.
         </p>
 
@@ -41,7 +41,7 @@ export function SecretSelect({ room }: { room: RoomApi }) {
 
         {confirmed ? (
           <p className="pill hot" role="status">
-            Locked in — waiting for {snap.opponent?.name ?? "the other player"} ({snap.round?.secretsChosen ?? 1}/2)
+            Locked in. Waiting for {snap.opponent?.name ?? "the other player"} ({snap.round?.secretsChosen ?? 1}/2)
           </p>
         ) : (
           <button className="btn ink" disabled={!picked} onClick={() => picked && action({ type: "select_secret", cardId: picked })}>
