@@ -1,13 +1,13 @@
 import { LandingActions } from "@/components/LandingActions";
 import { GameplayMock } from "@/components/GameplayMock";
+import { CarbonEgg } from "@/components/CarbonEgg";
 
 export default function Home() {
   return (
     <>
       <main className="paper" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0 }}>
         <div className="paper-col" style={{ flex: 1, alignContent: "center" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo" src="/logo.png" alt="In Good Company" width={900} height={821} />
+          <CarbonEgg />
           <h1 className="paper-title">In Good Company</h1>
           <p className="paper-sub">A game about the people in your life.</p>
 
