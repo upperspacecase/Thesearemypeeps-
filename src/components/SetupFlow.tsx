@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { RoomApi } from "@/lib/useRoom";
 import { toCardImage } from "@/lib/client";
-import { CropModal } from "./CropModal";
+import { CropEditor, CropModal, type CropHandle } from "./CropModal";
 
 // The pre-game flow, party-game style:
 //   Start → Invite your person → both build privately → ready lobby → host starts.
@@ -25,7 +25,19 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
   });
   const [copied, setCopied] = useState(false);
   const [wizardName, setWizardName] = useState("");
+  const [wizardBusy, setWizardBusy] = useState(false);
+  const wizardCrop = useRef<CropHandle>(null);
   const [myName, setMyName] = useState("");
+
+  // the wizard crops from the original file when we still have it (sharper
+  // than re-cropping the already-cropped card), falling back to the card image
+  const wizardCardId = snap?.me.cards.find((c) => !c.name.trim())?.id ?? null;
+  const wizardSrc = useMemo(() => {
+    if (!wizardCardId) return null;
+    const original = originals.current.get(wizardCardId);
+    return original ? URL.createObjectURL(original) : null;
+  }, [wizardCardId]);
+  useEffect(() => () => { if (wizardSrc) URL.revokeObjectURL(wizardSrc); }, [wizardSrc]);
 
   if (!snap) return null;
   const min = snap.room.deckMin;
@@ -146,9 +158,27 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
   }
 
   async function nextWizard() {
-    if (!currentCard || !wizardName.trim()) return;
-    await action({ type: "rename_card", cardId: currentCard.id, name: wizardName.trim() });
-    setWizardName("");
+    if (!currentCard || !wizardName.trim() || wizardBusy) return;
+    setWizardBusy(true);
+    try {
+      if (wizardCrop.current?.dirty) {
+        const blob = await wizardCrop.current.blob();
+        if (blob) {
+          const form = new FormData();
+          form.append("file", blob, "card.jpg");
+          const res = await fetch(`/api/rooms/${roomId}/cards/${currentCard.id}`, { method: "POST", body: form });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error((data as { error?: string }).error ?? "Could not save the crop");
+          }
+        }
+      }
+      await action({ type: "rename_card", cardId: currentCard.id, name: wizardName.trim() });
+      setWizardName("");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setWizardBusy(false);
   }
 
   // ---- which screen of the flow are we on? ----
@@ -217,16 +247,15 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
     const done = cards.length - unnamed.length;
     body = (
       <>
-        <p className="paper-count">{done + 1} of {cards.length}</p>
+        <div className="wizard-progress" role="progressbar" aria-valuemin={0} aria-valuemax={cards.length} aria-valuenow={done} aria-label={`${done} of ${cards.length} people named`}>
+          {cards.map((c, i) => (
+            <i key={c.id} className={i < done ? "on" : ""} />
+          ))}
+        </div>
         <h1 className="paper-h">Who&rsquo;s this?</h1>
         <div className="wizard-photo-wrap">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="wizard-photo"
-            src={currentCard.imageUrl}
-            alt="Person to name"
-          />
-          <button className="paper-skip" onClick={() => openCrop(currentCard)}>Adjust crop</button>
+          <CropEditor key={currentCard.id} ref={wizardCrop} src={wizardSrc ?? currentCard.imageUrl} className="wizard-photo" slider={false} />
+          <p className="wizard-crop-hint">Pinch to crop</p>
         </div>
         <div className="wizard-box">
           <input
@@ -240,8 +269,8 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
             onKeyDown={(e) => e.key === "Enter" && nextWizard()}
           />
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-            <button className="btn ink" disabled={!wizardName.trim()} onClick={nextWizard}>Next</button>
-            <button className="btn paperline sm" onClick={() => action({ type: "remove_card", cardId: currentCard.id })}>Remove photo</button>
+            <button className="btn paperline sm" disabled={wizardBusy} onClick={() => action({ type: "remove_card", cardId: currentCard.id })}>Remove photo</button>
+            <button className="btn ink" disabled={!wizardName.trim() || wizardBusy} onClick={nextWizard}>{wizardBusy ? "Saving…" : "Next"}</button>
           </div>
         </div>
       </>
@@ -281,10 +310,20 @@ export function SetupFlow({ room, roomId }: { room: RoomApi; roomId: string }) {
       />
       {editing && <CropModal src={editing.src} title={editing.title} onSave={saveCrop} onClose={closeCrop} />}
       {isHost && !opp && invited && cards.length > 0 && !bothReady && (
-        <p className="paper-float-invite">
-          Waiting for your person. <button onClick={share}>Invite again</button>
-          {snap.room.joinCode && <> or read them code <strong className="code">{snap.room.joinCode}</strong></>}
-        </p>
+        <div className="paper-float-invite">
+          <span className="pill waiting">
+            <i className="dot" aria-hidden />
+            Waiting for your person
+            <span className="sep" aria-hidden />
+            <button onClick={share}>Invite again</button>
+            {snap.room.joinCode && (
+              <>
+                <span className="sep" aria-hidden />
+                <span className="dim">code</span> <strong className="code">{snap.room.joinCode}</strong>
+              </>
+            )}
+          </span>
+        </div>
       )}
     </main>
   );
@@ -306,7 +345,6 @@ function LobbyView({
   uploading: number;
 }) {
   const { snap, action } = room;
-  const [consent, setConsent] = useState(false);
   if (!snap) return null;
   const min = snap.room.deckMin;
   const max = snap.room.deckMax;
@@ -365,18 +403,11 @@ function LobbyView({
               </button>
             )}
           </div>
-          <label className="paper-consent">
-            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-            <span>
-              I have permission to share these photos in this private game, and everyone shown is an adult. They&rsquo;re
-              deleted 24 hours after the game.
-            </span>
-          </label>
           <button
             className="btn ink"
             style={{ width: "100%" }}
-            disabled={!consent || !enough}
-            onClick={() => action({ type: "mark_ready", consent })}
+            disabled={!enough}
+            onClick={() => action({ type: "mark_ready", consent: true })}
           >
             {enough ? `I'm ready (${cards.length} people)` : `Add ${min - cards.length} more to play`}
           </button>
