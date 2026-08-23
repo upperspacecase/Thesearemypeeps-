@@ -49,8 +49,8 @@ function GameplayMock() {
 export default function Home() {
   return (
     <>
-      <main className="paper">
-        <div className="paper-col">
+      <main className="paper" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0 }}>
+        <div className="paper-col" style={{ flex: 1, alignContent: "center" }}>
           <svg className="logo-tile" viewBox="0 0 66 66" aria-hidden>
             <rect x="1.5" y="1.5" width="63" height="63" rx="10" fill="none" stroke="#22302B" strokeWidth="3" />
             {[
@@ -66,7 +66,11 @@ export default function Home() {
 
           <h1 className="paper-title">In Good Company</h1>
           <p className="paper-sub">Get to know someone through the people who made them.</p>
-          <p className="paper-line">Bring 5&ndash;15 photos each. Ask questions. Guess who.</p>
+
+          <div className="hero-mock">
+            <span className="chip-madefor">Made for two</span>
+            <GameplayMock />
+          </div>
 
           <LandingActions />
 
@@ -74,15 +78,10 @@ export default function Home() {
           <p className="paper-meta">About 20 minutes</p>
           <p className="paper-tag serif-q">The cards are your people.</p>
         </div>
-      </main>
-
-      <section className="night-band">
-        <span className="chip-madefor">Made for two</span>
-        <GameplayMock />
-        <footer className="night-foot">
+        <footer className="paper-foot">
           One private link. No download. Photos delete themselves after the game &middot; <a href="/privacy">privacy</a>
         </footer>
-      </section>
+      </main>
     </>
   );
 }

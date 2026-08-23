@@ -535,3 +535,8 @@ body::after {
   font-size: 13px; color: rgba(34, 48, 43, 0.75);
 }
 .paper-float-invite button { text-decoration: underline; text-underline-offset: 3px; color: #22302b; font-size: 13px; }
+
+/* gameplay mock inside the hero */
+.hero-mock { display: grid; justify-items: center; gap: 14px; margin: 22px 0 26px; }
+.hero-mock .phone-mock { width: min(250px, 72vw); transform: rotate(2deg); }
+.paper-foot { font-size: 13px; color: rgba(34, 48, 43, 0.7); text-align: center; padding: 26px 0 4px; }
