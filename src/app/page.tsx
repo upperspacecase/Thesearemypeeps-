@@ -64,29 +64,6 @@ const STEPS: Array<{ title: string; body: string; qs?: string[]; visual: React.R
     body: "Each answer clears the board. Swiped the wrong person? Swipe them again to bring them back. Tap anyone to look closer, and guess from there when you're sure.",
     visual: <MiniBoard down={[0, 1, 3, 4, 5, 6, 8, 9, 10, 11]} />,
   },
-  {
-    title: "Meet the person",
-    body: "At the reveal, tell the story: who they are, how you met, and what the other player should know about them.",
-    visual: (
-      <div
-        aria-hidden
-        style={{
-          width: "min(280px,100%)", borderRadius: 28, padding: "12px 12px 22px", background: "var(--cream)",
-          color: "var(--ink)", textAlign: "center", boxShadow: "0 30px 60px -24px rgba(70,20,2,.6)", transform: "rotate(2deg)",
-        }}
-      >
-        <div style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "1/1", marginBottom: 16 }}>
-          <svg viewBox="0 0 60 60" preserveAspectRatio="xMidYMid slice" style={{ display: "block", width: "100%", height: "100%" }}>
-            <rect width="60" height="60" fill="#EFA07E" />
-            <circle cx="30" cy="24" r="12" fill="#7C2504" />
-            <path d="M8 60 C8 44 22 38 30 38 C38 38 52 44 52 60 Z" fill="#7C2504" />
-          </svg>
-        </div>
-        <p style={{ fontWeight: 600, fontSize: 20, letterSpacing: "-0.01em" }}>Maya</p>
-        <p className="serif-q" style={{ fontSize: 17, color: "#8A4A2C", marginTop: 2 }}>knew me before the job title</p>
-      </div>
-    ),
-  },
 ];
 
 export default function Home() {
