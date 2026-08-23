@@ -1,4 +1,4 @@
-import { StartButtons } from "@/components/StartButtons";
+import { LandingActions } from "@/components/LandingActions";
 
 // Wordle-style splash: what the game is, one button, and a picture of play.
 // The rules live in the game itself (first-run overlay), not on this page.
@@ -48,47 +48,41 @@ function GameplayMock() {
 
 export default function Home() {
   return (
-    <main
-      style={{
-        position: "relative", minHeight: "100svh", overflow: "hidden",
-        display: "flex", flexDirection: "column", padding: "56px 24px 18px",
-        background:
-          "radial-gradient(1100px 700px at 78% 18%, #3D7F8A 0%, transparent 60%), radial-gradient(900px 900px at 12% 85%, #27565F 0%, transparent 55%), var(--ember)",
-      }}
-    >
-      <div className="figure" aria-hidden>
-        <span style={{ width: 520, height: 640, right: "8%", top: "4%", background: "radial-gradient(closest-side,rgba(217,200,166,.3),transparent 72%)" }} />
-        <span style={{ width: 420, height: 560, right: "16%", top: "34%", background: "radial-gradient(closest-side,rgba(243,236,215,.22),transparent 70%)" }} />
-        <span style={{ width: 640, height: 520, left: "-10%", bottom: "-14%", background: "radial-gradient(closest-side,rgba(20,45,38,.55),transparent 72%)" }} />
-      </div>
+    <>
+      <main className="paper">
+        <div className="paper-col">
+          <svg className="logo-tile" viewBox="0 0 66 66" aria-hidden>
+            <rect x="1.5" y="1.5" width="63" height="63" rx="10" fill="none" stroke="#22302B" strokeWidth="3" />
+            {[
+              ["#F3ECD7", "#F3ECD7", "#F3ECD7"],
+              ["#F3ECD7", "#D9A441", "#9BB08A"],
+              ["#C0704F", "#35707B", "#9BB08A"],
+            ].map((row, r) =>
+              row.map((fill, c) => (
+                <rect key={`${r}${c}`} x={7 + c * 18} y={7 + r * 18} width={16} height={16} rx={3} fill={fill} stroke="#22302B" strokeWidth="1.6" />
+              ))
+            )}
+          </svg>
 
-      <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
-      <div className="splash">
-        <div className="panel" style={{ width: "min(560px,100%)", borderRadius: 40 }}>
-          <h1 className="display" style={{ marginBottom: 22, fontSize: "clamp(27px,4.2vw,38px)" }}>
-            <strong style={{ color: "var(--cream)", fontWeight: 500 }}>In Good Company</strong> is a two-player guessing
-            game made from the real people in your lives.
-          </h1>
+          <h1 className="paper-title">In Good Company</h1>
+          <p className="paper-sub">Get to know someone through the people who made them.</p>
+          <p className="paper-line">Bring 5&ndash;15 photos each. Ask questions. Guess who.</p>
 
-          <div style={{ display: "grid", gap: 10, margin: "0 0 22px" }}>
-            <p className="eyebrow" style={{ marginBottom: 0, color: "var(--cream-dim)", fontSize: 12 }}>You might begin with</p>
-            <p className="serif-q" style={{ fontSize: "clamp(19px,2.8vw,24px)", lineHeight: 1.25 }}>&ldquo;Are they wearing a hat?&rdquo;</p>
-            <p className="eyebrow" style={{ marginBottom: 0, color: "var(--cream-dim)", fontSize: 12 }}>Five minutes later, you&rsquo;re asking</p>
-            <p className="serif-q" style={{ fontSize: "clamp(19px,2.8vw,24px)", lineHeight: 1.25, color: "var(--good)" }}>
-              &ldquo;Is this the person you would call when everything went wrong?&rdquo;
-            </p>
-          </div>
+          <LandingActions />
 
-          <StartButtons />
+          <p className="paper-meta"><strong>2 players &middot; 5&ndash;15 photos each</strong></p>
+          <p className="paper-meta">About 20 minutes</p>
+          <p className="paper-tag serif-q">The cards are your people.</p>
         </div>
+      </main>
 
+      <section className="night-band">
+        <span className="chip-madefor">Made for two</span>
         <GameplayMock />
-      </div>
-      </div>
-
-      <footer style={{ position: "relative", textAlign: "center", fontSize: 13, color: "var(--cream-dim)", paddingTop: 20 }}>
-        One private link. No download. Photos delete themselves after the game · <a href="/privacy">privacy</a>
-      </footer>
-    </main>
+        <footer className="night-foot">
+          One private link. No download. Photos delete themselves after the game &middot; <a href="/privacy">privacy</a>
+        </footer>
+      </section>
+    </>
   );
 }
